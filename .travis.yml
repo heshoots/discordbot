@@ -1,0 +1,9 @@
+sudo: required
+services:
+- docker
+language: generic
+script:
+- docker build -t quorauk/discordbot .
+after_success:
+- docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+- docker push quorauk/discordbot
