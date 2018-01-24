@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dghubble/go-twitter/twitter"
+	"github.com/dghubble/oauth1"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,6 +30,33 @@ func main() {
 	discord.Close()
 }
 
+func tweet(message string) {
+	fmt.Println("tweeting")
+	config := oauth1.NewConfig(os.Getenv("CONSUMER_KEY"), os.Getenv("CONSUMER_SECRET"))
+	token := oauth1.NewToken(os.Getenv("ACCESS_TOKEN"), os.Getenv("ACCESS_SECRET"))
+	httpClient := config.Client(oauth1.NoContext, token)
+	client := twitter.NewClient(httpClient)
+	_, _, err := client.Statuses.Update(message, nil)
+	if err != nil {
+		fmt.Println("could not tweet,", err)
+	}
+}
+
+func runCommand(s *discordgo.Session, command string, message string) {
+	fmt.Println(len(command), "..", message)
+	if command == "!twitter " {
+		fmt.Println("match")
+	}
+	switch command {
+	case "!twitter":
+		tweet(message)
+	case "!discord":
+		s.ChannelMessageSend("386488116426440706", "@everyone "+message)
+	default:
+		fmt.Println("didn't match")
+	}
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -35,8 +64,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	const param string = "!"
 	if m.Content[0:1] == param {
 		split := strings.SplitAfterN(m.Content, " ", 2)
-		command := split[0]
-		message := split[1]
+		command := strings.Trim(split[0], " ")
+		message := strings.Trim(split[1], " ")
+		runCommand(s, command, message)
+
 		s.ChannelMessageSend(m.ChannelID, message)
 		fmt.Println(command)
 	}
