@@ -25,7 +25,7 @@ func main() {
 		envconfig.Usage("discord_bot", &config)
 		os.Exit(1)
 	}
-	discord, err := discordgo.New("Bot " + os.Getenv("DISCORD_API"))
+	discord, err := discordgo.New("Bot " + config.DiscordApi)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 	}

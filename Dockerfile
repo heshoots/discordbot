@@ -1,4 +1,4 @@
-FROM golang:1.9.3-alpine
+FROM golang:1.9.3
 RUN apk add --update git
 ADD main.go .
 RUN go get -v github.com/heshoots/discordbot
