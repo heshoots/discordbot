@@ -5,6 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
+	"github.com/kelseyhightower/envconfig"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,6 +13,18 @@ import (
 )
 
 func main() {
+	var config struct {
+		DiscordApi     string `required:"true" split_words:"true"`
+		ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
+		ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
+		AccessToken    string `desc:"Twitter access token" split_words:"true"`
+		AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
+	}
+	if err := envconfig.Process("discord_bot", &config); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		envconfig.Usage("discord_bot", &config)
+		os.Exit(1)
+	}
 	discord, err := discordgo.New("Bot " + os.Getenv("DISCORD_API"))
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
