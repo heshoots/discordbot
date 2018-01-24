@@ -12,14 +12,16 @@ import (
 	"syscall"
 )
 
+var config struct {
+        DiscordApi     string `required:"true" split_words:"true"`
+        ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
+        ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
+        AccessToken    string `desc:"Twitter access token" split_words:"true"`
+        AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
+        PostChannel    string `desc:"channel id to post" split_words:"true"`
+}
+
 func main() {
-	var config struct {
-		DiscordApi     string `required:"true" split_words:"true"`
-		ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
-		ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
-		AccessToken    string `desc:"Twitter access token" split_words:"true"`
-		AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
-	}
 	if err := envconfig.Process("discord_bot", &config); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		envconfig.Usage("discord_bot", &config)
@@ -45,9 +47,9 @@ func main() {
 
 func tweet(message string) {
 	fmt.Println("tweeting")
-	config := oauth1.NewConfig(os.Getenv("CONSUMER_KEY"), os.Getenv("CONSUMER_SECRET"))
-	token := oauth1.NewToken(os.Getenv("ACCESS_TOKEN"), os.Getenv("ACCESS_SECRET"))
-	httpClient := config.Client(oauth1.NoContext, token)
+	twitterconfig := oauth1.NewConfig(config.ConsumerKey, config.ConsumerSecret)
+	token := oauth1.NewToken(config.AccessToken, config.AccessSecret)
+	httpClient := twitterconfig.Client(oauth1.NoContext, token)
 	client := twitter.NewClient(httpClient)
 	_, _, err := client.Statuses.Update(message, nil)
 	if err != nil {
@@ -56,7 +58,7 @@ func tweet(message string) {
 }
 
 func runCommand(s *discordgo.Session, command string, message string) {
-	fmt.Println(len(command), "..", message)
+	fmt.Println(command, "..", message)
 	if command == "!twitter " {
 		fmt.Println("match")
 	}
@@ -64,7 +66,7 @@ func runCommand(s *discordgo.Session, command string, message string) {
 	case "!twitter":
 		tweet(message)
 	case "!discord":
-		s.ChannelMessageSend("386488116426440706", "@everyone "+message)
+		s.ChannelMessageSend(config.PostChannel, message)
 	default:
 		fmt.Println("didn't match")
 	}
@@ -80,8 +82,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		command := strings.Trim(split[0], " ")
 		message := strings.Trim(split[1], " ")
 		runCommand(s, command, message)
-
-		s.ChannelMessageSend(m.ChannelID, message)
-		fmt.Println(command)
 	}
 }
