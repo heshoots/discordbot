@@ -68,9 +68,9 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 		tweet(message)
 		s.ChannelMessageSend(config.PostChannel, message)
 	case "!twitter":
-		out + tweet(message)
+		tweet(message)
 	case "!discord":
-		out + s.ChannelMessageSend(config.PostChannel, message)
+		s.ChannelMessageSend(config.PostChannel, message)
 	default:
 		return errors.New("command not recognised")
 	}
