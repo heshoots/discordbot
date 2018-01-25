@@ -23,9 +23,9 @@ var config struct {
 }
 
 func main() {
+	envconfig.Usage("discord_bot", &config)
 	if err := envconfig.Process("discord_bot", &config); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		envconfig.Usage("discord_bot", &config)
 		os.Exit(1)
 	}
 	discord, err := discordgo.New("Bot " + config.DiscordApi)
@@ -64,10 +64,13 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 		fmt.Println("match")
 	}
 	switch command {
-	case "!twitter":
+	case "!announce":
 		tweet(message)
-	case "!discord":
 		s.ChannelMessageSend(config.PostChannel, message)
+	case "!twitter":
+		out + tweet(message)
+	case "!discord":
+		out + s.ChannelMessageSend(config.PostChannel, message)
 	default:
 		return errors.New("command not recognised")
 	}
