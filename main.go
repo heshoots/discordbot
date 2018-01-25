@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
@@ -13,12 +14,12 @@ import (
 )
 
 var config struct {
-        DiscordApi     string `required:"true" split_words:"true"`
-        ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
-        ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
-        AccessToken    string `desc:"Twitter access token" split_words:"true"`
-        AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
-        PostChannel    string `desc:"channel id to post" split_words:"true"`
+	DiscordApi     string `required:"true" split_words:"true"`
+	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
+	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
+	AccessToken    string `desc:"Twitter access token" split_words:"true"`
+	AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
+	PostChannel    string `desc:"channel id to post" split_words:"true"`
 }
 
 func main() {
@@ -57,7 +58,7 @@ func tweet(message string) {
 	}
 }
 
-func runCommand(s *discordgo.Session, command string, message string) {
+func runCommand(s *discordgo.Session, command string, message string) error {
 	fmt.Println(command, "..", message)
 	if command == "!twitter " {
 		fmt.Println("match")
@@ -68,8 +69,9 @@ func runCommand(s *discordgo.Session, command string, message string) {
 	case "!discord":
 		s.ChannelMessageSend(config.PostChannel, message)
 	default:
-		fmt.Println("didn't match")
+		return errors.New("command not recognised")
 	}
+	return nil
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -80,7 +82,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Content[0:1] == param {
 		split := strings.SplitAfterN(m.Content, " ", 2)
 		command := strings.Trim(split[0], " ")
-		message := strings.Trim(split[1], " ")
-		runCommand(s, command, message)
+		var message string = ""
+		if len(split) > 1 {
+			message = strings.Trim(split[1], " ")
+		}
+		err := runCommand(s, command, message)
+		if err != nil {
+			fmt.Println("Failed to run command", err)
+			s.ChannelMessageSend(m.ChannelID, "Error: "+err.Error())
+		}
 	}
 }
