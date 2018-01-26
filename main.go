@@ -18,7 +18,7 @@ import (
 
 var config struct {
 	DiscordApi     string `required:"true" split_words:"true"`
-	ChallongeApi   string `split_words:"true"`
+	ChallongeApi   string `required:"true" split_words:"true"`
 	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
 	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
 	AccessToken    string `desc:"Twitter access token" split_words:"true"`
