@@ -77,12 +77,22 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 	return nil
 }
 
+func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+	permissions, err := s.State.UserChannelPermissions(m.Author.ID, m.ChannelID)
+	if err != nil {
+		fmt.Println("could not access permissions, ", err)
+	}
+	fmt.Println(permissions, discordgo.PermissionAdministrator)
+	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	fmt.Println(isAdmin(s, m))
 	const param string = "!"
-	if m.Content[0:1] == param {
+	if isAdmin(s, m) && m.Content[0:1] == param {
 		split := strings.SplitAfterN(m.Content, " ", 2)
 		command := strings.Trim(split[0], " ")
 		var message string = ""
