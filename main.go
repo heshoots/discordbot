@@ -92,7 +92,7 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 
 func createTournament(name string, game string) (string, error) {
 	client := &http.Client{}
-	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": "smbf", "game_name": game}
+	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": "smbf", "game_name": game, "tournament_type": "double elimination"}
 	values := map[string]map[string]string{"tournament": tournamentvalues}
 	jsonValue, err := json.Marshal(values)
 	if err != nil {
