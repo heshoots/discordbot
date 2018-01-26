@@ -1,4 +1,4 @@
-FROM golang:1.9.3
+FROM golang:1.9.3 as builder
 RUN apt-get update && apt-get install -y unzip --no-install-recommends && \
     apt-get autoremove -y && apt-get clean -y && \
     wget -O dep https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 && \
@@ -10,4 +10,8 @@ ADD Gopkg.toml .
 ADD main.go .
 RUN dep ensure
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w' -o discordbot ./main.go
+
+FROM alpine:3.7
+COPY --from=builder /go/src/app/discordbot /root/discordbot
+WORKDIR /root
 CMD ["./discordbot"]
