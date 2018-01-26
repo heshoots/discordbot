@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/kelseyhightower/envconfig"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -15,6 +18,7 @@ import (
 
 var config struct {
 	DiscordApi     string `required:"true" split_words:"true"`
+	ChallongeApi   string `split_words:"true"`
 	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
 	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
 	AccessToken    string `desc:"Twitter access token" split_words:"true"`
@@ -71,10 +75,42 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 		tweet(message)
 	case "!discord":
 		s.ChannelMessageSend(config.PostChannel, message)
+	case "!challonge":
+		split := strings.SplitAfterN(message, " ", 2)
+		name := strings.Trim(split[0], " ")
+		game := strings.Trim(split[1], " ")
+		url, err := createTournament(name, game)
+		if err != nil {
+			return err
+		}
+		s.ChannelMessageSend(config.PostChannel, url)
 	default:
 		return errors.New("command not recognised")
 	}
 	return nil
+}
+
+func createTournament(name string, game string) (string, error) {
+	client := &http.Client{}
+	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": "smbf", "game_name": game}
+	values := map[string]map[string]string{"tournament": tournamentvalues}
+	jsonValue, err := json.Marshal(values)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest("POST", "https://api.challonge.com/v1/tournaments.json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	q := req.URL.Query()
+	q.Add("api_key", config.ChallongeApi)
+	req.URL.RawQuery = q.Encode()
+	_, err = client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	return "http://smbf.challonge.com/" + name, nil
 }
 
 func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
@@ -82,7 +118,6 @@ func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	if err != nil {
 		fmt.Println("could not access permissions, ", err)
 	}
-	fmt.Println(permissions, discordgo.PermissionAdministrator)
 	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
 }
 
@@ -90,7 +125,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	fmt.Println(isAdmin(s, m))
 	const param string = "!"
 	if isAdmin(s, m) && m.Content[0:1] == param {
 		split := strings.SplitAfterN(m.Content, " ", 2)
