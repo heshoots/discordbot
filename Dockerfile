@@ -12,6 +12,7 @@ RUN dep ensure
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w' -o discordbot ./main.go
 
 FROM alpine:3.7
+RUN apk add --update ca-certificates
 COPY --from=builder /go/src/app/discordbot /root/discordbot
 WORKDIR /root
 CMD ["./discordbot"]
