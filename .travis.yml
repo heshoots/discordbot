@@ -6,7 +6,7 @@ addons:
   ssh_known_hosts:
   - "$SERVER"
 before_script:
-  - echo -e "Host $SERVERntStrictHostKeyChecking non" >> ~/.ssh/config
+  - echo -e "Host $SERVER\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 script:
 - docker build -t quorauk/discordbot .
 after_success:
