@@ -18,7 +18,7 @@ import (
 
 var config struct {
 	DiscordApi     string `required:"true" split_words:"true"`
-	ChallongeApi   string `required:"true" split_words:"true"`
+	ChallongeApi   string `split_words:"true"`
 	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
 	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
 	AccessToken    string `desc:"Twitter access token" split_words:"true"`
@@ -62,11 +62,8 @@ func tweet(message string) {
 	}
 }
 
-func runCommand(s *discordgo.Session, command string, message string) error {
-	fmt.Println(command, "..", message)
-	if command == "!twitter " {
-		fmt.Println("match")
-	}
+func adminCommand(s *discordgo.Session, command string, message string) error {
+	fmt.Println(command, message)
 	switch command {
 	case "!announce":
 		tweet(message)
@@ -77,6 +74,9 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 		s.ChannelMessageSend(config.PostChannel, message)
 	case "!challonge":
 		split := strings.SplitAfterN(message, " ", 2)
+		if len(split) != 2 {
+			return errors.New("not enough input, command: !challonge url game_name")
+		}
 		name := strings.Trim(split[0], " ")
 		game := strings.Trim(split[1], " ")
 		url, err := createTournament(name, game)
@@ -84,10 +84,15 @@ func runCommand(s *discordgo.Session, command string, message string) error {
 			return err
 		}
 		s.ChannelMessageSend(config.PostChannel, url)
-	default:
-		return errors.New("command not recognised")
 	}
 	return nil
+}
+
+func userCommand(s *discordgo.Session, command string, message string) {
+	switch command {
+	case "!hi":
+		s.ChannelMessageSend(config.PostChannel, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
+	}
 }
 
 func createTournament(name string, game string) (string, error) {
@@ -106,9 +111,14 @@ func createTournament(name string, game string) (string, error) {
 	q := req.URL.Query()
 	q.Add("api_key", config.ChallongeApi)
 	req.URL.RawQuery = q.Encode()
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
+	}
+	if resp.Status != "200" {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		return "", errors.New("challonge create failed " + buf.String())
 	}
 	return "http://smbf.challonge.com/" + name, nil
 }
@@ -126,17 +136,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	const param string = "!"
-	if isAdmin(s, m) && m.Content[0:1] == param {
+	if m.Content[0:1] == param {
 		split := strings.SplitAfterN(m.Content, " ", 2)
 		command := strings.Trim(split[0], " ")
 		var message string = ""
 		if len(split) > 1 {
 			message = strings.Trim(split[1], " ")
 		}
-		err := runCommand(s, command, message)
-		if err != nil {
-			fmt.Println("Failed to run command", err)
-			s.ChannelMessageSend(m.ChannelID, "Error: "+err.Error())
+		if isAdmin(s, m) {
+			err := adminCommand(s, command, message)
+			if err != nil {
+				fmt.Println("Failed to run command", err)
+				s.ChannelMessageSend(m.ChannelID, "Error: "+err.Error())
+			}
 		}
+		userCommand(s, command, message)
 	}
 }
