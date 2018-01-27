@@ -88,10 +88,10 @@ func adminCommand(s *discordgo.Session, command string, message string) error {
 	return nil
 }
 
-func userCommand(s *discordgo.Session, command string, message string) {
+func userCommand(s *discordgo.Session, command string, message string, channel string) {
 	switch command {
 	case "!hi":
-		s.ChannelMessageSend(config.PostChannel, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
+		s.ChannelMessageSend(channel, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
 	}
 }
 
@@ -150,6 +150,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				s.ChannelMessageSend(m.ChannelID, "Error: "+err.Error())
 			}
 		}
-		userCommand(s, command, message)
+		userCommand(s, command, message, m.ChannelID)
 	}
 }
