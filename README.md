@@ -1,5 +1,7 @@
 # SMBF Discord Bot
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/338e52b1d57e4df881aa/maintainability)](https://codeclimate.com/github/heshoots/discordbot/maintainability) [![Build Status](https://travis-ci.org/heshoots/discordbot.svg?branch=master)](https://travis-ci.org/heshoots/discordbot)
+
 ## Getting Started
 
 ### Building
