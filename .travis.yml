@@ -13,7 +13,9 @@ after_success:
 - docker tag quorauk/discordbot:latest quourauk/discordbot:$TRAVIS_BUILD_NUMBER
 - docker tag quorauk/discordbot:latest quourauk/discordbot:$TRAVIS_COMMIT
 - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-- docker push quorauk/discordbot
+- docker push quorauk/discordbot:latest
+- docker push quorauk/discordbot:$TRAVIS_COMMIT
+- docker push quorauk/discordbot:$TRAVIS_BUILD_NUMBER
 before_install:
 - openssl aes-256-cbc -K $encrypted_d8f043273547_key -iv $encrypted_d8f043273547_iv
   -in deploy_rsa.enc -out /tmp/deploy_rsa -d
