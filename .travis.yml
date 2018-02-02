@@ -24,6 +24,6 @@ before_deploy:
 deploy:
 - provider: script
   skip_cleanup: true
-  script: ssh -p22 $SERVER_USER@$SERVER "cd discordbot && docker-compose pull && docker-compose down && docker-compose up -d"
+  script: ssh -p22 $SERVER_USER@$SERVER "cd discordbot && sed -i s/smbfapi:*/smbfapi:$TRAVIS_BUILD_NUMBER/g docker-compose.yaml && docker-compose pull && docker-compose down && docker-compose up -d"
   on:
     branch: master
