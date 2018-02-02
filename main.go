@@ -24,6 +24,7 @@ var config struct {
 	AccessToken    string `desc:"Twitter access token" split_words:"true"`
 	AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
 	PostChannel    string `desc:"channel id to post" split_words:"true"`
+	AdminChannel   string `desc:"channel id to post errors" split_words:"true"`
 }
 
 func main() {
@@ -147,7 +148,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			err := adminCommand(s, command, message)
 			if err != nil {
 				fmt.Println("Failed to run command", err)
-				s.ChannelMessageSend(m.ChannelID, "Error: "+err.Error())
+				s.ChannelMessageSend(config.AdminChannel, "Error: "+err.Error())
 			}
 		}
 		userCommand(s, command, message, m.ChannelID)
