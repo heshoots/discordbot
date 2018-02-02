@@ -116,10 +116,10 @@ func createTournament(name string, game string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if resp.Status != "200" {
+	if resp.StatusCode != 200 {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
-		return "", errors.New("challonge create failed " + buf.String())
+		return "", errors.New(resp.Status + "challonge create failed " + buf.String())
 	}
 	return "http://smbf.challonge.com/" + name, nil
 }
