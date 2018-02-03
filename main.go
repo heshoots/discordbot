@@ -19,6 +19,7 @@ import (
 var config struct {
 	DiscordApi     string `required:"true" split_words:"true"`
 	ChallongeApi   string `split_words:"true"`
+	Subdomain      string `desc:"Challonge subdomain"`
 	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
 	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
 	AccessToken    string `desc:"Twitter access token" split_words:"true"`
@@ -51,26 +52,29 @@ func main() {
 	discord.Close()
 }
 
-func tweet(message string) {
+func tweet(message string) string {
 	fmt.Println("tweeting")
 	twitterconfig := oauth1.NewConfig(config.ConsumerKey, config.ConsumerSecret)
 	token := oauth1.NewToken(config.AccessToken, config.AccessSecret)
 	httpClient := twitterconfig.Client(oauth1.NoContext, token)
 	client := twitter.NewClient(httpClient)
-	_, _, err := client.Statuses.Update(message, nil)
+	tweet, _, err := client.Statuses.Update(message, nil)
 	if err != nil {
 		fmt.Println("could not tweet,", err)
 	}
+	return "http://twitter.com/sodiumshowdown/status/" + fmt.Sprint(tweet.ID)
 }
 
 func adminCommand(s *discordgo.Session, command string, message string) error {
 	fmt.Println(command, message)
 	switch command {
 	case "!announce":
-		tweet(message)
+		url := tweet(message)
+		s.ChannelMessageSend(config.AdminChannel, url)
 		s.ChannelMessageSend(config.PostChannel, message)
 	case "!twitter":
-		tweet(message)
+		url := tweet(message)
+		s.ChannelMessageSend(config.AdminChannel, url)
 	case "!discord":
 		s.ChannelMessageSend(config.PostChannel, message)
 	case "!challonge":
@@ -98,7 +102,7 @@ func userCommand(s *discordgo.Session, command string, message string, channel s
 
 func createTournament(name string, game string) (string, error) {
 	client := &http.Client{}
-	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": "smbf", "game_name": game, "tournament_type": "double elimination"}
+	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": config.Subdomain, "game_name": game, "tournament_type": "double elimination"}
 	values := map[string]map[string]string{"tournament": tournamentvalues}
 	jsonValue, err := json.Marshal(values)
 	if err != nil {
