@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
@@ -31,20 +32,25 @@ var config struct {
 func main() {
 	envconfig.Usage("discord_bot", &config)
 	if err := envconfig.Process("discord_bot", &config); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Println(os.Stderr, err)
 		os.Exit(1)
 	}
 	discord, err := discordgo.New("Bot " + config.DiscordApi)
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
+		log.Println("error creating Discord session,", err)
 	}
-	discord.AddHandler(messageCreate)
+	discord.AddHandler(hiHandler)
+	discord.AddHandler(discordHandler)
+	discord.AddHandler(challongeHandler)
+	discord.AddHandler(twitterHandler)
+	discord.AddHandler(hiHandler)
 	err = discord.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Println("error opening connection,", err)
 	}
+	discord.ChannelMessageSend(config.AdminChannel, "Redeployed")
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	log.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -53,51 +59,16 @@ func main() {
 }
 
 func tweet(message string) string {
-	fmt.Println("tweeting")
+	log.Println("tweeting")
 	twitterconfig := oauth1.NewConfig(config.ConsumerKey, config.ConsumerSecret)
 	token := oauth1.NewToken(config.AccessToken, config.AccessSecret)
 	httpClient := twitterconfig.Client(oauth1.NoContext, token)
 	client := twitter.NewClient(httpClient)
 	tweet, _, err := client.Statuses.Update(message, nil)
 	if err != nil {
-		fmt.Println("could not tweet,", err)
+		log.Println("could not tweet,", err)
 	}
 	return "http://twitter.com/sodiumshowdown/status/" + fmt.Sprint(tweet.ID)
-}
-
-func adminCommand(s *discordgo.Session, command string, message string) error {
-	fmt.Println(command, message)
-	switch command {
-	case "!announce":
-		url := tweet(message)
-		s.ChannelMessageSend(config.AdminChannel, url)
-		s.ChannelMessageSend(config.PostChannel, message)
-	case "!twitter":
-		url := tweet(message)
-		s.ChannelMessageSend(config.AdminChannel, url)
-	case "!discord":
-		s.ChannelMessageSend(config.PostChannel, message)
-	case "!challonge":
-		split := strings.SplitAfterN(message, " ", 2)
-		if len(split) != 2 {
-			return errors.New("not enough input, command: !challonge url game_name")
-		}
-		name := strings.Trim(split[0], " ")
-		game := strings.Trim(split[1], " ")
-		url, err := createTournament(name, game)
-		if err != nil {
-			return err
-		}
-		s.ChannelMessageSend(config.PostChannel, url)
-	}
-	return nil
-}
-
-func userCommand(s *discordgo.Session, command string, message string, channel string) {
-	switch command {
-	case "!hi":
-		s.ChannelMessageSend(channel, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
-	}
 }
 
 func createTournament(name string, game string) (string, error) {
@@ -131,30 +102,78 @@ func createTournament(name string, game string) (string, error) {
 func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	permissions, err := s.State.UserChannelPermissions(m.Author.ID, m.ChannelID)
 	if err != nil {
-		fmt.Println("could not access permissions, ", err)
+		log.Println("could not access permissions, ", err)
 	}
 	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
 }
 
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+func hasPrefix(prefix string, m *discordgo.MessageCreate) bool {
+	if len(m.Content) >= len(prefix) {
+		return m.Content[0:len(prefix)] == prefix
+	}
+	return false
+}
+
+func getCommand(m *discordgo.MessageCreate) string {
+	split := strings.SplitAfterN(m.Content, " ", 2)
+	if (len(split) > 1) {
+		return split[1]
+	}
+	return ""
+}
+
+func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	const param string = "!"
-	if m.Content[0:1] == param {
-		split := strings.SplitAfterN(m.Content, " ", 2)
-		command := strings.Trim(split[0], " ")
-		var message string = ""
-		if len(split) > 1 {
-			message = strings.Trim(split[1], " ")
+	if hasPrefix("!discord", m) && isAdmin(s, m) {
+		s.ChannelMessageSend(config.PostChannel, getCommand(m))
+	}
+	if hasPrefix("!announce", m) && isAdmin(s, m) {
+		s.ChannelMessageSend(config.PostChannel, getCommand(m))
+	}
+}
+
+func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	if hasPrefix("!challonge", m) && isAdmin(s, m) {
+		command := getCommand(m)
+		split := strings.SplitAfterN(command , " ", 2)
+		if len(split) != 2 {
+			s.ChannelMessageSend(config.AdminChannel, "not enough input, command: !challonge url game_name")
 		}
-		if isAdmin(s, m) {
-			err := adminCommand(s, command, message)
-			if err != nil {
-				fmt.Println("Failed to run command", err)
-				s.ChannelMessageSend(config.AdminChannel, "Error: "+err.Error())
-			}
+		name := strings.Trim(split[0], " ")
+		game := strings.Trim(split[1], " ")
+		url, err := createTournament(name, game)
+		if err != nil {
+			s.ChannelMessageSend(config.AdminChannel, "couldn't create tournament: " + err.Error())
 		}
-		userCommand(s, command, message, m.ChannelID)
+		s.ChannelMessageSend(config.PostChannel, url)
+	}
+
+}
+
+func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	if hasPrefix("!twitter", m) && isAdmin(s, m) {
+		url := tweet(getCommand(m))
+		s.ChannelMessageSend(config.AdminChannel, url)
+	}
+	if hasPrefix("!announce", m) && isAdmin(s, m) {
+		url := tweet(getCommand(m))
+		s.ChannelMessageSend(config.AdminChannel, url)
+	}
+}
+
+func hiHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	if hasPrefix("!hi", m) {
+		s.ChannelMessageSend(m.ChannelID, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
 	}
 }
