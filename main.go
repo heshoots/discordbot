@@ -39,7 +39,6 @@ func main() {
 	if err != nil {
 		log.Println("error creating Discord session,", err)
 	}
-	discord.AddHandler(hiHandler)
 	discord.AddHandler(discordHandler)
 	discord.AddHandler(challongeHandler)
 	discord.AddHandler(twitterHandler)
