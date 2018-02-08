@@ -29,6 +29,8 @@ var config struct {
 	AdminChannel   string `desc:"channel id to post errors" split_words:"true"`
 }
 
+var compiled string
+
 func main() {
 	envconfig.Usage("discord_bot", &config)
 	if err := envconfig.Process("discord_bot", &config); err != nil {
@@ -47,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Println("error opening connection,", err)
 	}
-	discord.ChannelMessageSend(config.AdminChannel, "Redeployed")
+	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: " + compiled)
 	// Wait here until CTRL-C or other term signal is received.
 	log.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
