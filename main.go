@@ -41,10 +41,13 @@ func main() {
 	if err != nil {
 		log.Println("error creating Discord session,", err)
 	}
-	discord.AddHandler(discordHandler)
-	discord.AddHandler(challongeHandler)
-	discord.AddHandler(twitterHandler)
-	discord.AddHandler(hiHandler)
+	discord.AddHandler(prefixHandler("!discord", discordHandler))
+	discord.AddHandler(prefixHandler("!announce", discordHandler))
+	discord.AddHandler(prefixHandler("!challonge", challongeHandler))
+	discord.AddHandler(prefixHandler("!twitter", twitterHandler))
+	discord.AddHandler(prefixHandler("!tweet", twitterHandler))
+	discord.AddHandler(prefixHandler("!announce", twitterHandler))
+	discord.AddHandler(prefixHandler("!hi", hiHandler))
 	err = discord.Open()
 	if err != nil {
 		log.Println("error opening connection,", err)
@@ -97,7 +100,7 @@ func createTournament(name string, game string) (string, error) {
 		buf.ReadFrom(resp.Body)
 		return "", errors.New(resp.Status + "challonge create failed " + buf.String())
 	}
-	return "http://smbf.challonge.com/" + name, nil
+	return "http://" +  config.Subdomain + ".challonge.com/" + name, nil
 }
 
 func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
@@ -123,23 +126,25 @@ func getCommand(m *discordgo.MessageCreate) string {
 	return ""
 }
 
+func prefixHandler(prefix string, handler func (*discordgo.Session, *discordgo.MessageCreate)) func (s *discordgo.Session, m *discordgo.MessageCreate) {
+	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		if m.Author.ID == s.State.User.ID {
+			return
+		}
+		if hasPrefix(prefix, m) {
+			handler(s, m)
+		}
+	}
+}
+
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-	if hasPrefix("!discord", m) && isAdmin(s, m) {
-		s.ChannelMessageSend(config.PostChannel, getCommand(m))
-	}
-	if hasPrefix("!announce", m) && isAdmin(s, m) {
+	if isAdmin(s, m) {
 		s.ChannelMessageSend(config.PostChannel, getCommand(m))
 	}
 }
 
 func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-	if hasPrefix("!challonge", m) && isAdmin(s, m) {
+	if isAdmin(s, m) {
 		command := getCommand(m)
 		split := strings.SplitAfterN(command , " ", 2)
 		if len(split) != 2 {
@@ -157,24 +162,12 @@ func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-	if hasPrefix("!twitter", m) && isAdmin(s, m) {
-		url := tweet(getCommand(m))
-		s.ChannelMessageSend(config.AdminChannel, url)
-	}
-	if hasPrefix("!announce", m) && isAdmin(s, m) {
+	if isAdmin(s, m) {
 		url := tweet(getCommand(m))
 		s.ChannelMessageSend(config.AdminChannel, url)
 	}
 }
 
 func hiHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-	if hasPrefix("!hi", m) {
-		s.ChannelMessageSend(m.ChannelID, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
-	}
+	s.ChannelMessageSend(m.ChannelID, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
 }
