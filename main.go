@@ -238,7 +238,6 @@ To remove a role use !takerole <Role>
 Available Roles
 -----------
 
-Thems Fighting Herds
 `
 	roles, err := models.GetRoles()
 	if err != nil {
