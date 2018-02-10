@@ -232,8 +232,8 @@ func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	rolesHelp :=  `
-To get a role use !giverole <Role>
-To remove a role use !takerole <Role>
+To get a role use !giverole Role
+To remove a role use !takerole Role
 
 Available Roles
 -----------
