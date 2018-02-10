@@ -237,7 +237,6 @@ To remove a role use !takerole <Role>
 
 Available Roles
 -----------
-
 `
 	roles, err := models.GetRoles()
 	if err != nil {
@@ -247,7 +246,7 @@ Available Roles
 	}
 	var output string
 	for _, role := range roles {
-		output = role.Name + "\n" + output
+		output = output + "\n" + role.Name
 	}
 	s.ChannelMessageSend(m.ChannelID, "``` " + rolesHelp + output + " ```" )
 }
