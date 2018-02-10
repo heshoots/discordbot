@@ -237,7 +237,9 @@ To remove a role use !takerole <Role>
 
 Available Roles
 -----------
-	`
+
+Thems Fighting Herds
+`
 	roles, err := models.GetRoles()
 	if err != nil {
 		log.Println("couldn't show roles, ", err)
@@ -253,13 +255,23 @@ Available Roles
 
 func giveRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := getCommand(m)
+	guild, _ := getGuild(s, m)
+	if command == "Thems Fighting Herds" {
+		err := s.GuildBanCreateWithReason(guild.ID, m.Author.ID, "Furry", 0)
+		if err != nil {
+			log.Println("Something went wrong", err)
+			s.ChannelMessageSend(m.ChannelID, "Something went wrong")
+			return
+		}
+		s.ChannelMessageSend(m.ChannelID, "BANNED: get owned")
+		return
+	}
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
 		return
 	}
-	guild, _ := getGuild(s, m)
 	err = s.GuildMemberRoleAdd(guild.ID, m.Author.ID, role.RoleID)
 	if err != nil {
 		log.Println("couldn't add role", err)
