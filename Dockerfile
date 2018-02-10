@@ -8,7 +8,7 @@ WORKDIR /go/src/github.com/heshoots/discordbot
 ADD Gopkg.lock .
 ADD Gopkg.toml .
 ADD main.go .
-ADD models .
+ADD models/ ./models
 RUN dep ensure
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-X main.compiled=`date -u +.%Y%m%d.%H%M%S` -w" -o discordbot ./main.go
 
