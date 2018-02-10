@@ -10,6 +10,7 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/heshoots/discordbot/models"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,15 +19,17 @@ import (
 )
 
 var config struct {
-	DiscordApi     string `required:"true" split_words:"true"`
-	ChallongeApi   string `split_words:"true"`
-	Subdomain      string `desc:"Challonge subdomain"`
-	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
-	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
-	AccessToken    string `desc:"Twitter access token" split_words:"true"`
-	AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
-	PostChannel    string `desc:"channel id to post" split_words:"true"`
-	AdminChannel   string `desc:"channel id to post errors" split_words:"true"`
+	DiscordApi       string `required:"true" split_words:"true"`
+	ChallongeApi     string `split_words:"true"`
+	Subdomain        string `desc:"Challonge subdomain"`
+	ConsumerKey      string `desc:"Twitter consumer key" split_words:"true"`
+	ConsumerSecret   string `desc:"Twitter consumer secret" split_words:"true"`
+	AccessToken      string `desc:"Twitter access token" split_words:"true"`
+	AccessSecret     string `desc:"Twitter access secret" split_words:"true"`
+	PostChannel      string `desc:"channel id to post" split_words:"true"`
+	AdminChannel     string `desc:"channel id to post errors" split_words:"true"`
+	Database         string `desc:"backend postgres database"`
+	DatabaseHost     string `desc:"backend postgres host" split_words:"true"`
 }
 
 var compiled string
@@ -37,17 +40,30 @@ func main() {
 		log.Println(os.Stderr, err)
 		os.Exit(1)
 	}
+	models.DB(config.DatabaseHost, config.Database)
 	discord, err := discordgo.New("Bot " + config.DiscordApi)
 	if err != nil {
 		log.Println("error creating Discord session,", err)
 	}
 	discord.AddHandler(prefixHandler("!discord", discordHandler))
 	discord.AddHandler(prefixHandler("!announce", discordHandler))
+
 	discord.AddHandler(prefixHandler("!challonge", challongeHandler))
+
 	discord.AddHandler(prefixHandler("!twitter", twitterHandler))
 	discord.AddHandler(prefixHandler("!tweet", twitterHandler))
 	discord.AddHandler(prefixHandler("!announce", twitterHandler))
+
+	// Discord Role Handlers
+	discord.AddHandler(prefixHandler("!makerole", makeRoleHandler))
+	discord.AddHandler(prefixHandler("!removerole", removeRoleHandler))
+	discord.AddHandler(prefixHandler("!showroles", showRolesHandler))
+	discord.AddHandler(prefixHandler("!giverole", giveRoleHandler))
+	discord.AddHandler(prefixHandler("!takerole", takeRoleHandler))
+
+	// Fun handler
 	discord.AddHandler(prefixHandler("!hi", hiHandler))
+
 	err = discord.Open()
 	if err != nil {
 		log.Println("error opening connection,", err)
@@ -137,6 +153,140 @@ func prefixHandler(prefix string, handler func (*discordgo.Session, *discordgo.M
 	}
 }
 
+func getGuild(s *discordgo.Session, m *discordgo.MessageCreate) (*discordgo.Guild, error) {
+	// Attempt to get the channel from the state.
+	// If there is an error, fall back to the restapi
+	channel, err := s.State.Channel(m.ChannelID)
+	if err != nil {
+	    channel, err = s.Channel(m.ChannelID)
+	    if err != nil {
+		return nil, err
+	    }
+	}
+
+	// Attempt to get the guild from the state, 
+	// If there is an error, fall back to the restapi.
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+	    guild, err = s.Guild(channel.GuildID)
+	    if err != nil {
+		return nil, err
+	    }
+	}
+	return guild, nil
+}
+
+func getRoles(s *discordgo.Session, m *discordgo.MessageCreate) ([]*discordgo.Role, error)  {
+	guild, err := getGuild(s, m)
+	if err != nil {
+		log.Println("couldn't get guildID, ", err)
+		return nil, err
+	}
+	roles, err := s.GuildRoles(guild.ID)
+	if err != nil {
+		log.Println("couldn't get roles, ", err)
+		return nil, err
+	}
+	return roles, err
+}
+
+func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if isAdmin(s, m) {
+		command := getCommand(m)
+		err := models.DeleteRole(command)
+		if err != nil {
+			log.Println("couldn't delete role, ", err)
+			s.ChannelMessageSend(config.AdminChannel, "couldn't delete role")
+			return
+		}
+		s.ChannelMessageSend(config.AdminChannel, "role deleted")
+	}
+}
+
+func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if isAdmin(s, m) {
+		roles, err := getRoles(s, m)
+		if err != nil {
+			s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
+			log.Println("couldn't get roles, ", err)
+			return
+		}
+		command := getCommand(m)
+		for _, role := range roles {
+			if command == role.Name {
+				role := models.Role{Name: role.Name, RoleID: role.ID}
+				err := models.CreateRole(&role)
+				if err != nil {
+					s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
+					log.Println("couldn't create role, ", err)
+					return
+
+				} else {
+					s.ChannelMessageSend(config.AdminChannel, "Role added")
+					return
+				}
+			}
+		}
+	}
+}
+
+func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	rolesHelp :=  `
+To get a role use !giverole <Role>
+To remove a role use !takerole <Role>
+
+Available Roles
+-----------
+	`
+	roles, err := models.GetRoles()
+	if err != nil {
+		log.Println("couldn't show roles, ", err)
+		s.ChannelMessageSend(config.PostChannel, "couldn't show roles")
+		return
+	}
+	var output string
+	for _, role := range roles {
+		output = role.Name + "\n" + output
+	}
+	s.ChannelMessageSend(m.ChannelID, "``` " + rolesHelp + output + " ```" )
+}
+
+func giveRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	command := getCommand(m)
+	role, err := models.GetRole(command)
+	if err != nil {
+		log.Println("Role unavailable", err)
+		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		return
+	}
+	guild, _ := getGuild(s, m)
+	err = s.GuildMemberRoleAdd(guild.ID, m.Author.ID, role.RoleID)
+	if err != nil {
+		log.Println("couldn't add role", err)
+		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		return
+	}
+	s.ChannelMessageSend(m.ChannelID, "Role added")
+}
+
+func takeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	command := getCommand(m)
+	role, err := models.GetRole(command)
+	if err != nil {
+		log.Println("Role unavailable", err)
+		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		return
+	}
+	guild, _ := getGuild(s, m)
+	err = s.GuildMemberRoleRemove(guild.ID, m.Author.ID, role.RoleID)
+	if err != nil {
+		log.Println("couldn't remove role", err)
+		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		return
+	}
+	s.ChannelMessageSend(m.ChannelID, "Role removed")
+}
+
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if isAdmin(s, m) {
 		s.ChannelMessageSend(config.PostChannel, getCommand(m))
@@ -149,12 +299,14 @@ func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		split := strings.SplitAfterN(command , " ", 2)
 		if len(split) != 2 {
 			s.ChannelMessageSend(config.AdminChannel, "not enough input, command: !challonge url game_name")
+			return
 		}
 		name := strings.Trim(split[0], " ")
 		game := strings.Trim(split[1], " ")
 		url, err := createTournament(name, game)
 		if err != nil {
 			s.ChannelMessageSend(config.AdminChannel, "couldn't create tournament: " + err.Error())
+			return
 		}
 		s.ChannelMessageSend(config.PostChannel, url)
 	}

@@ -32,6 +32,25 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/go-pg/migrations"
+  packages = ["."]
+  revision = "56f220c05c9e11f7ca5b06a232e43eda16ce2cde"
+  version = "v6.1.0"
+
+[[projects]]
+  name = "github.com/go-pg/pg"
+  packages = [
+    ".",
+    "internal",
+    "internal/parser",
+    "internal/pool",
+    "orm",
+    "types"
+  ]
+  revision = "e5e42855e818b6662efa83642751e147dd1e1fdb"
+  version = "v6.9.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/google/go-querystring"
   packages = ["query"]
@@ -42,6 +61,12 @@
   packages = ["."]
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/inflection"
+  packages = ["."]
+  revision = "1c35d901db3da928c72a72d8458480cc9ade058f"
 
 [[projects]]
   name = "github.com/kelseyhightower/envconfig"
@@ -68,6 +93,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f0fbb1072a0a56a0228bf8d9ea13098ae943351d69d11c772f602b9180b34c76"
+  inputs-digest = "599322fdc7cab5f4396b94ce69b08f2dfed399dc04c40dbfc41a302f58c122d4"
   solver-name = "gps-cdcl"
   solver-version = 1
