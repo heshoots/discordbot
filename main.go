@@ -301,7 +301,11 @@ func takeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if isAdmin(s, m) {
-		s.ChannelMessageSend(config.PostChannel, getCommand(m))
+		if hasPrefix("!announce", m) {
+			s.ChannelMessageSend(config.PostChannel, "@everyone " + getCommand(m))
+		} else {
+			s.ChannelMessageSend(config.PostChannel, getCommand(m))
+		}
 	}
 }
 
