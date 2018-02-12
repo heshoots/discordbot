@@ -62,6 +62,7 @@ func main() {
 	discord.AddHandler(prefixHandler("!takerole", takeRoleHandler))
 
 	discord.AddHandler(prefixHandler("!", loggingHandler))
+	discord.AddHandler(prefixHandler("!help", helpHandler))
 
 	// Fun handler
 	discord.AddHandler(prefixHandler("!hi", hiHandler))
@@ -334,6 +335,20 @@ func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		url := tweet(getCommand(m))
 		s.ChannelMessageSend(config.AdminChannel, url)
 	}
+}
+
+func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if isAdmin(s, m) {
+		helpText := `!help get help (obviously)
+!discord sends message to discord notifications
+!twitter/tweet sends tweet to smbf twitter
+!announce tweets and messages notifications, uses @ everyone in discord
+!challonge TournamentName Game creates tournament, posts it in notifications
+!makerole makes a role available to be added by bot
+!removerole removes role from being added by bot`
+		s.ChannelMessageSend(config.AdminChannel, helpText)
+	}
+
 }
 
 func loggingHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
