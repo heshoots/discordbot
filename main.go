@@ -238,6 +238,8 @@ func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 To get a role use !giverole Role
 To remove a role use !takerole Role
 
+Roles ending in "Fighters" can be @ mentioned
+
 Available Roles
 -----------
 `
