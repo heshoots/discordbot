@@ -61,6 +61,8 @@ func main() {
 	discord.AddHandler(prefixHandler("!giverole", giveRoleHandler))
 	discord.AddHandler(prefixHandler("!takerole", takeRoleHandler))
 
+	discord.AddHandler(prefixHandler("!", loggingHandler))
+
 	// Fun handler
 	discord.AddHandler(prefixHandler("!hi", hiHandler))
 
@@ -328,6 +330,10 @@ func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		url := tweet(getCommand(m))
 		s.ChannelMessageSend(config.AdminChannel, url)
 	}
+}
+
+func loggingHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	log.Println(m.Author.Username, m.Content)
 }
 
 func hiHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
