@@ -68,3 +68,21 @@ func TestPrefixHandler(t *testing.T) {
 		t.Error("Handler should have been called")
 	}
 }
+
+func TestGetComman(t *testing.T) {
+	messageCreate := GetMockMessageCreate("!command this is a command", "10")
+	command := getCommand(messageCreate)
+	if command != "this is a command" {
+		t.Error("Returned the incorrect command")
+	}
+	messageCreate = GetMockMessageCreate("!nocommand", "10")
+	command = getCommand(messageCreate)
+	if command != "" {
+		t.Error("didn't return empty command")
+	}
+	messageCreate = GetMockMessageCreate("!nocommand ", "10")
+	command = getCommand(messageCreate)
+	if command != "" {
+		t.Error("doesn't handle extra spaces in command")
+	}
+}
