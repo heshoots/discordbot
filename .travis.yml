@@ -1,7 +1,9 @@
+language: go
+go:
+  - 1.9
 sudo: required
 services:
 - docker
-language: generic
 addons:
   ssh_known_hosts:
   - "$SERVER"
