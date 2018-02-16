@@ -5,83 +5,93 @@ import (
 	"testing"
 )
 
-func GetMockSession(userid string) *discordgo.Session {
-	var session *discordgo.Session
-	session = new(discordgo.Session)
-	session.State = new(discordgo.State)
-	session.State.User = new(discordgo.User)
-	session.State.User.ID = userid
-	return session
+type MockMessage struct {
+	*discordgo.Message
 }
 
-func GetMockMessageCreate(content string, authorID string) *discordgo.MessageCreate {
+func (m *MockMessage) addUserId(userID string) *MockMessage {
 	author := new(discordgo.User)
-	author.ID = authorID
-	var message *discordgo.Message
-	message = new(discordgo.Message)
-	message.Author = author
-	message.Content = content
-	var messageEvent *discordgo.MessageCreate
-	messageEvent = new(discordgo.MessageCreate)
-	messageEvent.Message = message
-	return messageEvent
+	author.ID = userID
+	m.Author = author
+	return m
+}
+
+func (m *MockMessage) setContent(content string) *MockMessage {
+	m.Content = content
+	return m
+}
+
+func (m *MockMessage) getMessageCreate() *discordgo.MessageCreate {
+	return &discordgo.MessageCreate{m.Message}
+}
+
+type MockSession struct {
+	*discordgo.Session
+	buffer []*OutMessage
+}
+
+type OutMessage struct {
+	Channel string
+	Message string
+}
+
+func (s *MockSession) setUserId(userId string) *MockSession {
+	s.State = new(discordgo.State)
+	s.State.User = new(discordgo.User)
+	s.State.User.ID = userId
+	return s
+}
+
+func (s *MockSession) ChannelMessageSend(channel string, message string) {
+	s.buffer = append(s.buffer, &OutMessage{channel, message})
+}
+
+type MockState struct {
+	*discordgo.State
+}
+
+func (*MockState) isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+	return true
 }
 
 func TestHasPrefix(t *testing.T) {
-	msg := GetMockMessageCreate("!hello world", "10")
-	res := hasPrefix("!hello", msg)
+	msg := &MockMessage{&discordgo.Message{}}
+	msg.addUserId("10").setContent("!hello world")
+	res := hasPrefix("!hello", msg.getMessageCreate())
 	if res != true {
 		t.Error("Message contains prefix")
 	}
-	msg = GetMockMessageCreate("no !hello world", "10")
-	res = hasPrefix("!hello", msg)
+	msg.addUserId("10").setContent("no !hello world")
+	res = hasPrefix("!hello", msg.getMessageCreate())
 	if res != false {
 		t.Error("Prefix is not at beginning of message")
 	}
-	msg = GetMockMessageCreate("!test world", "10")
-	res = hasPrefix("!hello", msg)
+	msg.addUserId("10").setContent("!test world")
+	res = hasPrefix("!hello", msg.getMessageCreate())
 	if res != false {
 		t.Error("Prefix does not occur")
 	}
-	msg = GetMockMessageCreate("!hell", "10")
-	res = hasPrefix("!hello", msg)
+	msg.addUserId("10").setContent("!hell")
+	res = hasPrefix("!hello", msg.getMessageCreate())
 	if res != false {
 		t.Error("Message is shorter than prefix")
 	}
 }
 
-func TestPrefixHandler(t *testing.T) {
-	session := GetMockSession("10")
-	messageCreate := GetMockMessageCreate("!nocall", "10")
-	prefixed := prefixHandler("!nocall", func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		t.Error("Should not be called")
-	})
-	prefixed(session, messageCreate)
-	session = GetMockSession("11")
-	messageCreate = GetMockMessageCreate("!call", "10")
-	called := false
-	prefixed = prefixHandler("!call", func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		called = true
-	})
-	prefixed(session, messageCreate)
-	if called == false {
-		t.Error("Handler should have been called")
-	}
-}
-
-func TestGetComman(t *testing.T) {
-	messageCreate := GetMockMessageCreate("!command this is a command", "10")
-	command := getCommand(messageCreate)
+func TestGetCommand(t *testing.T) {
+	msg := &MockMessage{&discordgo.Message{}}
+	msg.addUserId("10").setContent("!command this is a command")
+	command := getCommand(msg.getMessageCreate())
 	if command != "this is a command" {
 		t.Error("Returned the incorrect command")
 	}
-	messageCreate = GetMockMessageCreate("!nocommand", "10")
-	command = getCommand(messageCreate)
+	msg.addUserId("10").setContent("!nocommand")
+	command = getCommand(msg.getMessageCreate())
 	if command != "" {
 		t.Error("didn't return empty command")
 	}
-	messageCreate = GetMockMessageCreate("!nocommand ", "10")
-	command = getCommand(messageCreate)
+	msg.addUserId("10").setContent("!nocommand ")
+	command = getCommand(msg.getMessageCreate())
 	if command != "" {
 		t.Error("doesn't handle extra spaces in command")
 	}
