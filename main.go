@@ -35,7 +35,7 @@ var config struct {
 var compiled string
 
 type Session interface {
-	Channel(channelID string) (*discordgo.Channel, error)
+	IsAdmin(authorID string, channelID string) bool
 	Guild(guildID string) (*discordgo.Guild, error)
 	UserChannelPermissions(userID string, channelID string) (int, error)
 	GuildRoles(guildID string) ([]*discordgo.Role, error)
@@ -45,15 +45,26 @@ type Session interface {
 	BotID() string
 }
 
+type MessageCreate interface {
+	GetAuthorID() string
+	GetAuthorUsername() string
+	GetChannelID() string
+	GetContent() string
+}
+
 type ConcreteSession struct {
 	*discordgo.Session
+}
+
+type ConcreteMessageCreate struct {
+	*discordgo.MessageCreate
 }
 
 func (s *ConcreteSession) UserChannelPermissions(userID string, channelID string) (int, error) {
 	return s.State.UserChannelPermissions(userID, channelID)
 }
 
-func (s *ConcreteSession) Channel(channelID string) (*discordgo.Channel, error) {
+func (s *ConcreteSession) Guild(channelID string) (*discordgo.Guild, error) {
 	channel, err := s.State.Channel(channelID)
 	if err != nil {
 		channel, err = s.Channel(channelID)
@@ -61,13 +72,9 @@ func (s *ConcreteSession) Channel(channelID string) (*discordgo.Channel, error) 
 			return nil, err
 		}
 	}
-	return channel, err
-}
-
-func (s *ConcreteSession) Guild(guildID string) (*discordgo.Guild, error) {
-	guild, err := s.State.Guild(guildID)
+	guild, err := s.State.Guild(channel.GuildID)
 	if err != nil {
-		guild, err = s.Guild(guildID)
+		guild, err = s.Guild(channel.GuildID)
 		if err != nil {
 			return nil, err
 		}
@@ -95,9 +102,25 @@ func (s *ConcreteSession) BotID() string {
 	return s.State.User.ID
 }
 
-func addHandler(bot *discordgo.Session, h func(Session, *discordgo.MessageCreate)) {
+func (m *ConcreteMessageCreate) GetAuthorID() string {
+	return m.Author.ID
+}
+
+func (m *ConcreteMessageCreate) GetAuthorUsername() string {
+	return m.Author.Username
+}
+
+func (m *ConcreteMessageCreate) GetChannelID() string {
+	return m.ChannelID
+}
+
+func (m *ConcreteMessageCreate) GetContent() string {
+	return m.Content
+}
+
+func addHandler(bot *discordgo.Session, h func(Session, MessageCreate)) {
 	bot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		h(&ConcreteSession{s}, m)
+		h(&ConcreteSession{s}, &ConcreteMessageCreate{m})
 	})
 }
 
@@ -189,32 +212,33 @@ func createTournament(name string, game string) (string, error) {
 	return "http://" + config.Subdomain + ".challonge.com/" + name, nil
 }
 
-func isAdmin(s Session, m *discordgo.MessageCreate) bool {
-	permissions, err := s.UserChannelPermissions(m.Author.ID, m.ChannelID)
+func (s *ConcreteSession) IsAdmin(authorID string, channelID string) bool {
+	permissions, err := s.UserChannelPermissions(authorID, channelID)
 	if err != nil {
 		log.Println("could not access permissions, ", err)
+		return false
 	}
 	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
 }
 
-func hasPrefix(prefix string, m *discordgo.MessageCreate) bool {
-	if len(m.Content) >= len(prefix) {
-		return m.Content[0:len(prefix)] == prefix
+func hasPrefix(prefix string, m MessageCreate) bool {
+	if len(m.GetContent()) >= len(prefix) {
+		return m.GetContent()[0:len(prefix)] == prefix
 	}
 	return false
 }
 
-func getCommand(m *discordgo.MessageCreate) string {
-	split := strings.SplitAfterN(m.Content, " ", 2)
+func getCommand(m MessageCreate) string {
+	split := strings.SplitAfterN(m.GetContent(), " ", 2)
 	if len(split) > 1 {
 		return split[1]
 	}
 	return ""
 }
 
-func prefixHandler(prefix string, handler func(Session, *discordgo.MessageCreate)) func(s Session, m *discordgo.MessageCreate) {
-	return func(s Session, m *discordgo.MessageCreate) {
-		if m.Author.ID == s.BotID() {
+func prefixHandler(prefix string, handler func(Session, MessageCreate)) func(s Session, m MessageCreate) {
+	return func(s Session, m MessageCreate) {
+		if m.GetAuthorID() == s.BotID() {
 			return
 		}
 		if hasPrefix(prefix, m) {
@@ -223,17 +247,8 @@ func prefixHandler(prefix string, handler func(Session, *discordgo.MessageCreate
 	}
 }
 
-func getGuild(s Session, m *discordgo.MessageCreate) (*discordgo.Guild, error) {
-	channel, err := s.Channel(m.ChannelID)
-	if err != nil {
-		return nil, err
-	}
-	guild, err := s.Guild(channel.GuildID)
-	return guild, err
-}
-
-func getRoles(s Session, m *discordgo.MessageCreate) ([]*discordgo.Role, error) {
-	guild, err := getGuild(s, m)
+func getRoles(s Session, m MessageCreate) ([]*discordgo.Role, error) {
+	guild, err := s.Guild(m.GetChannelID())
 	if err != nil {
 		log.Println("couldn't get guildID, ", err)
 		return nil, err
@@ -246,8 +261,8 @@ func getRoles(s Session, m *discordgo.MessageCreate) ([]*discordgo.Role, error) 
 	return roles, err
 }
 
-func removeRoleHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func removeRoleHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		command := getCommand(m)
 		err := models.DeleteRole(command)
 		if err != nil {
@@ -259,8 +274,8 @@ func removeRoleHandler(s Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func makeRoleHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func makeRoleHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		roles, err := getRoles(s, m)
 		if err != nil {
 			s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
@@ -286,7 +301,7 @@ func makeRoleHandler(s Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func showRolesHandler(s Session, m *discordgo.MessageCreate) {
+func showRolesHandler(s Session, m MessageCreate) {
 	rolesHelp := `
 To get a role use !giverole Role
 To remove a role use !takerole Role
@@ -306,47 +321,47 @@ Available Roles
 	for _, role := range roles {
 		output = output + "\n" + role.Name
 	}
-	s.ChannelMessageSend(m.ChannelID, "``` "+rolesHelp+output+" ```")
+	s.ChannelMessageSend(m.GetChannelID(), "``` "+rolesHelp+output+" ```")
 }
 
-func giveRoleHandler(s Session, m *discordgo.MessageCreate) {
+func giveRoleHandler(s Session, m MessageCreate) {
 	command := getCommand(m)
-	guild, _ := getGuild(s, m)
+	guild, _ := s.Guild(m.GetChannelID())
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		s.ChannelMessageSend(m.GetChannelID(), "couldn't add role")
 		return
 	}
-	err = s.GuildMemberRoleAdd(guild.ID, m.Author.ID, role.RoleID)
+	err = s.GuildMemberRoleAdd(guild.ID, m.GetAuthorID(), role.RoleID)
 	if err != nil {
 		log.Println("couldn't add role", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		s.ChannelMessageSend(m.GetChannelID(), "couldn't add role")
 		return
 	}
-	s.ChannelMessageSend(m.ChannelID, "Role added")
+	s.ChannelMessageSend(m.GetChannelID(), "Role added")
 }
 
-func takeRoleHandler(s Session, m *discordgo.MessageCreate) {
+func takeRoleHandler(s Session, m MessageCreate) {
 	command := getCommand(m)
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		s.ChannelMessageSend(m.GetChannelID(), "couldn't remove role")
 		return
 	}
-	guild, _ := getGuild(s, m)
-	err = s.GuildMemberRoleRemove(guild.ID, m.Author.ID, role.RoleID)
+	guild, _ := s.Guild(m.GetChannelID())
+	err = s.GuildMemberRoleRemove(guild.ID, m.GetAuthorID(), role.RoleID)
 	if err != nil {
 		log.Println("couldn't remove role", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		s.ChannelMessageSend(m.GetChannelID(), "couldn't remove role")
 		return
 	}
-	s.ChannelMessageSend(m.ChannelID, "Role removed")
+	s.ChannelMessageSend(m.GetChannelID(), "Role removed")
 }
 
-func discordHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func discordHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		if hasPrefix("!announce", m) {
 			s.ChannelMessageSend(config.PostChannel, "@everyone "+getCommand(m))
 		} else {
@@ -355,8 +370,8 @@ func discordHandler(s Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func challongeHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func challongeHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		command := getCommand(m)
 		split := strings.SplitAfterN(command, " ", 2)
 		if len(split) != 2 {
@@ -375,15 +390,15 @@ func challongeHandler(s Session, m *discordgo.MessageCreate) {
 
 }
 
-func twitterHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func twitterHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		url := tweet(getCommand(m))
 		s.ChannelMessageSend(config.AdminChannel, url)
 	}
 }
 
-func helpHandler(s Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+func helpHandler(s Session, m MessageCreate) {
+	if s.IsAdmin(m.GetAuthorID(), m.GetChannelID()) {
 		helpText := `!help get help (obviously)
 !discord sends message to discord notifications
 !twitter/tweet sends tweet to smbf twitter
@@ -396,10 +411,10 @@ func helpHandler(s Session, m *discordgo.MessageCreate) {
 
 }
 
-func loggingHandler(s Session, m *discordgo.MessageCreate) {
-	log.Println(m.Author.Username, m.Content)
+func loggingHandler(s Session, m MessageCreate) {
+	log.Println(m.GetAuthorUsername(), m.GetContent())
 }
 
-func hiHandler(s Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSend(m.ChannelID, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
+func hiHandler(s Session, m MessageCreate) {
+	s.ChannelMessageSend(m.GetChannelID(), "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
 }
