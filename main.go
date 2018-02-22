@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/heshoots/discordbot/models"
+	"github.com/kelseyhightower/envconfig"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,17 +19,17 @@ import (
 )
 
 var config struct {
-	DiscordApi       string `required:"true" split_words:"true"`
-	ChallongeApi     string `split_words:"true"`
-	Subdomain        string `desc:"Challonge subdomain"`
-	ConsumerKey      string `desc:"Twitter consumer key" split_words:"true"`
-	ConsumerSecret   string `desc:"Twitter consumer secret" split_words:"true"`
-	AccessToken      string `desc:"Twitter access token" split_words:"true"`
-	AccessSecret     string `desc:"Twitter access secret" split_words:"true"`
-	PostChannel      string `desc:"channel id to post" split_words:"true"`
-	AdminChannel     string `desc:"channel id to post errors" split_words:"true"`
-	Database         string `desc:"backend postgres database"`
-	DatabaseHost     string `desc:"backend postgres host" split_words:"true"`
+	DiscordApi     string `required:"true" split_words:"true"`
+	ChallongeApi   string `split_words:"true"`
+	Subdomain      string `desc:"Challonge subdomain"`
+	ConsumerKey    string `desc:"Twitter consumer key" split_words:"true"`
+	ConsumerSecret string `desc:"Twitter consumer secret" split_words:"true"`
+	AccessToken    string `desc:"Twitter access token" split_words:"true"`
+	AccessSecret   string `desc:"Twitter access secret" split_words:"true"`
+	PostChannel    string `desc:"channel id to post" split_words:"true"`
+	AdminChannel   string `desc:"channel id to post errors" split_words:"true"`
+	Database       string `desc:"backend postgres database"`
+	DatabaseHost   string `desc:"backend postgres host" split_words:"true"`
 }
 
 var compiled string
@@ -58,8 +58,8 @@ func main() {
 	discord.AddHandler(prefixHandler("!makerole", makeRoleHandler))
 	discord.AddHandler(prefixHandler("!removerole", removeRoleHandler))
 	discord.AddHandler(prefixHandler("!showroles", showRolesHandler))
-	discord.AddHandler(prefixHandler("!giverole", giveRoleHandler))
-	discord.AddHandler(prefixHandler("!takerole", takeRoleHandler))
+	discord.AddHandler(prefixHandler("!iam ", iamHandler))
+	discord.AddHandler(prefixHandler("!iamn", iamnHandler))
 
 	discord.AddHandler(prefixHandler("!", loggingHandler))
 	discord.AddHandler(prefixHandler("!help", helpHandler))
@@ -71,7 +71,7 @@ func main() {
 	if err != nil {
 		log.Println("error opening connection,", err)
 	}
-	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: " + compiled)
+	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: "+compiled)
 	// Wait here until CTRL-C or other term signal is received.
 	log.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
@@ -119,7 +119,7 @@ func createTournament(name string, game string) (string, error) {
 		buf.ReadFrom(resp.Body)
 		return "", errors.New(resp.Status + "challonge create failed " + buf.String())
 	}
-	return "http://" +  config.Subdomain + ".challonge.com/" + name, nil
+	return "http://" + config.Subdomain + ".challonge.com/" + name, nil
 }
 
 func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
@@ -139,13 +139,13 @@ func hasPrefix(prefix string, m *discordgo.MessageCreate) bool {
 
 func getCommand(m *discordgo.MessageCreate) string {
 	split := strings.SplitAfterN(m.Content, " ", 2)
-	if (len(split) > 1) {
+	if len(split) > 1 {
 		return split[1]
 	}
 	return ""
 }
 
-func prefixHandler(prefix string, handler func (*discordgo.Session, *discordgo.MessageCreate)) func (s *discordgo.Session, m *discordgo.MessageCreate) {
+func prefixHandler(prefix string, handler func(*discordgo.Session, *discordgo.MessageCreate)) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
@@ -161,25 +161,25 @@ func getGuild(s *discordgo.Session, m *discordgo.MessageCreate) (*discordgo.Guil
 	// If there is an error, fall back to the restapi
 	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
-	    channel, err = s.Channel(m.ChannelID)
-	    if err != nil {
-		return nil, err
-	    }
+		channel, err = s.Channel(m.ChannelID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Attempt to get the guild from the state, 
+	// Attempt to get the guild from the state,
 	// If there is an error, fall back to the restapi.
 	guild, err := s.State.Guild(channel.GuildID)
 	if err != nil {
-	    guild, err = s.Guild(channel.GuildID)
-	    if err != nil {
-		return nil, err
-	    }
+		guild, err = s.Guild(channel.GuildID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return guild, nil
 }
 
-func getRoles(s *discordgo.Session, m *discordgo.MessageCreate) ([]*discordgo.Role, error)  {
+func getRoles(s *discordgo.Session, m *discordgo.MessageCreate) ([]*discordgo.Role, error) {
 	guild, err := getGuild(s, m)
 	if err != nil {
 		log.Println("couldn't get guildID, ", err)
@@ -234,9 +234,9 @@ func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	rolesHelp :=  `
-To get a role use !giverole Role
-To remove a role use !takerole Role
+	rolesHelp := `
+To get a role use !iam Role
+To remove a role use !iamn Role
 
 Roles ending in "Fighters" can be @ mentioned
 
@@ -253,10 +253,10 @@ Available Roles
 	for _, role := range roles {
 		output = output + "\n" + role.Name
 	}
-	s.ChannelMessageSend(m.ChannelID, "``` " + rolesHelp + output + " ```" )
+	s.ChannelMessageSend(m.ChannelID, "``` "+rolesHelp+output+" ```")
 }
 
-func giveRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := getCommand(m)
 	guild, _ := getGuild(s, m)
 	if command == "Thems Fighting Herds" {
@@ -284,7 +284,7 @@ func giveRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSend(m.ChannelID, "Role added")
 }
 
-func takeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := getCommand(m)
 	role, err := models.GetRole(command)
 	if err != nil {
@@ -305,7 +305,7 @@ func takeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if isAdmin(s, m) {
 		if hasPrefix("!announce", m) {
-			s.ChannelMessageSend(config.PostChannel, "@everyone " + getCommand(m))
+			s.ChannelMessageSend(config.PostChannel, "@everyone "+getCommand(m))
 		} else {
 			s.ChannelMessageSend(config.PostChannel, getCommand(m))
 		}
@@ -315,7 +315,7 @@ func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if isAdmin(s, m) {
 		command := getCommand(m)
-		split := strings.SplitAfterN(command , " ", 2)
+		split := strings.SplitAfterN(command, " ", 2)
 		if len(split) != 2 {
 			s.ChannelMessageSend(config.AdminChannel, "not enough input, command: !challonge url game_name")
 			return
@@ -324,7 +324,7 @@ func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		game := strings.Trim(split[1], " ")
 		url, err := createTournament(name, game)
 		if err != nil {
-			s.ChannelMessageSend(config.AdminChannel, "couldn't create tournament: " + err.Error())
+			s.ChannelMessageSend(config.AdminChannel, "couldn't create tournament: "+err.Error())
 			return
 		}
 		s.ChannelMessageSend(config.PostChannel, url)
