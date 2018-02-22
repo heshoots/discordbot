@@ -16,7 +16,7 @@ func CreateRole(role *Role) error {
 
 func GetRole(name string) (*Role, error) {
 	role := Role{}
-	err := db.Model(&role).Where("name = ?", name).Select()
+	err := db.Model(&role).Where("name ILIKE ?", name).Select()
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func GetRole(name string) (*Role, error) {
 }
 
 func DeleteRole(name string) error {
-	_, err := db.Model(&Role{}).Where("name = ?", name).Delete()
+	_, err := db.Model(&Role{}).Where("name ILIKE ?", name).Delete()
 	return err
 }
 
