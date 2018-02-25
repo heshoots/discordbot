@@ -328,6 +328,7 @@ func challongeHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		s.ChannelMessageSend(config.PostChannel, url)
+		s.ChannelMessageSend(config.AdminChannel, url)
 	}
 
 }
