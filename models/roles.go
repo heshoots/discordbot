@@ -1,5 +1,9 @@
 package models
 
+import (
+	"log"
+)
+
 type Role struct {
 	Id     int64
 	Name   string
@@ -26,6 +30,21 @@ func GetRole(name string) (*Role, error) {
 func DeleteRole(name string) error {
 	_, err := db.Model(&Role{}).Where("name ILIKE ?", name).Delete()
 	return err
+}
+
+func AddRoleCall(roleName string) {
+	role := Role{}
+	err := db.Model(&role).Where("name = ?", roleName).Select()
+	if err != nil {
+		log.Panic(err)
+		return
+	}
+	log.Println(role)
+	_, err = db.Exec("INSERT into rolecall (timestamp, role) VALUES (NOW(), ?)", role.Id)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
 }
 
 func GetRoles() ([]Role, error) {

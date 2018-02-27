@@ -367,6 +367,7 @@ func RoleCallHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			log.Panic(err)
 			return
 		}
+		models.AddRoleCall(roleData.Name)
 		log.Println(roleData)
 	}
 }
