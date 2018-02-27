@@ -62,6 +62,7 @@ func main() {
 	discord.AddHandler(prefixHandler("!iamn", iamnHandler))
 
 	discord.AddHandler(prefixHandler("!", loggingHandler))
+	discord.AddHandler(prefixHandler("", RoleCallHandler))
 	discord.AddHandler(prefixHandler("!help", helpHandler))
 
 	// Fun handler
@@ -352,6 +353,22 @@ func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(config.AdminChannel, helpText)
 	}
 
+}
+
+func RoleCallHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	guild, err := getGuild(s, m)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
+	for _, role := range m.MentionRoles {
+		roleData, err := s.State.Role(guild.ID, role)
+		if err != nil {
+			log.Panic(err)
+			return
+		}
+		log.Println(roleData)
+	}
 }
 
 func loggingHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
