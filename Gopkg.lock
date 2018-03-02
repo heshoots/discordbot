@@ -32,12 +32,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/go-pg/migrations"
-  packages = ["."]
-  revision = "56f220c05c9e11f7ca5b06a232e43eda16ce2cde"
-  version = "v6.1.0"
-
-[[projects]]
   name = "github.com/go-pg/pg"
   packages = [
     ".",
@@ -93,6 +87,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "599322fdc7cab5f4396b94ce69b08f2dfed399dc04c40dbfc41a302f58c122d4"
+  inputs-digest = "a52a5bda3da15b39546e89c31df95e5a577004b42463a89c21a8589de9397e6e"
   solver-name = "gps-cdcl"
   solver-version = 1
