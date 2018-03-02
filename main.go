@@ -249,7 +249,7 @@ Available Roles
 	roles, err := models.GetRoles()
 	if err != nil {
 		log.Println("couldn't show roles, ", err)
-		s.ChannelMessageSend(config.PostChannel, "couldn't show roles")
+		s.ChannelMessageSend(m.ChannelID, "couldn't show roles")
 		return
 	}
 	var output string
