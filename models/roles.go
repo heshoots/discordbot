@@ -40,7 +40,7 @@ func AddRoleCall(roleName string) {
 		return
 	}
 	log.Println(role)
-	_, err = db.Exec("INSERT into rolecall (timestamp, role) VALUES (NOW(), ?)", role.Id)
+	_, err = db.Exec("INSERT into rolecall (timestamp, role_id) VALUES (NOW(), ?)", role.Id)
 	if err != nil {
 		log.Panic(err)
 		return
