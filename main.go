@@ -254,7 +254,7 @@ Available Roles
 	}
 	var output string
 	for _, role := range roles {
-		output = output + "\n" + role.Name
+		output = output + "\n !iam " + role.Name
 	}
 	s.ChannelMessageSend(m.ChannelID, "``` "+rolesHelp+output+" ```")
 }
