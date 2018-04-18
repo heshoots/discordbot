@@ -43,36 +43,15 @@ func main() {
 		os.Exit(1)
 	}
 	models.DB(config.DatabaseHost, config.Database, config.DatabaseUser, config.DatabasePassword)
-	discord, err := discordgo.New("Bot " + config.DiscordApi)
+	discord, err := NewRouter(config.DiscordApi)
 	if err != nil {
-		log.Println("error creating Discord session,", err)
+		log.Panic(err)
+		return
 	}
-	discord.AddHandler(prefixHandler("!discord", discordHandler))
-	discord.AddHandler(prefixHandler("!announce", discordHandler))
-
-	discord.AddHandler(prefixHandler("!challonge", challongeHandler))
-
-	discord.AddHandler(prefixHandler("!twitter", twitterHandler))
-	discord.AddHandler(prefixHandler("!tweet", twitterHandler))
-	discord.AddHandler(prefixHandler("!announce", twitterHandler))
-
-	// Discord Role Handlers
-	discord.AddHandler(prefixHandler("!makerole", makeRoleHandler))
-	discord.AddHandler(prefixHandler("!removerole", removeRoleHandler))
-	discord.AddHandler(prefixHandler("!showroles", showRolesHandler))
-	discord.AddHandler(prefixHandler("!iam ", iamHandler))
-	discord.AddHandler(prefixHandler("!iamn", iamnHandler))
-
-	discord.AddHandler(prefixHandler("!", loggingHandler))
-	discord.AddHandler(prefixHandler("", RoleCallHandler))
-	discord.AddHandler(prefixHandler("!help", helpHandler))
-
-	// Fun handler
-	discord.AddHandler(prefixHandler("!hi", hiHandler))
-
 	err = discord.Open()
 	if err != nil {
 		log.Println("error opening connection,", err)
+		return
 	}
 	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: "+compiled)
 	// Wait here until CTRL-C or other term signal is received.
