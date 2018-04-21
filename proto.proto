@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package buffer;
+
+service Greeter {
+  rpc SendMessage (HelloRequest) returns (RoleReply) {}
+}
+
+message HelloRequest {
+  string message = 1;
+}
+
+message RoleReply {
+  bool success = 2;
+}

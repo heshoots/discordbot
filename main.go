@@ -1,12 +1,18 @@
 package main
 
 import (
+	"github.com/bwmarrin/discordgo"
 	"github.com/heshoots/discordbot/models"
 	"github.com/kelseyhightower/envconfig"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	pb "github.com/heshoots/discordbot/protobuffer"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 var config struct {
@@ -27,6 +33,19 @@ var config struct {
 
 var compiled string
 
+const (
+	protoport = ":3000"
+)
+
+type server struct {
+	discord *discordgo.Session
+}
+
+func (s *server) SendMessage(ctx context.Context, in *pb.HelloRequest) (*pb.RoleReply, error) {
+	s.discord.ChannelMessageSend(config.PostChannel, in.Message)
+	return &pb.RoleReply{Success: true}, nil
+}
+
 func main() {
 	envconfig.Usage("discord_bot", &config)
 	if err := envconfig.Process("discord_bot", &config); err != nil {
@@ -44,6 +63,17 @@ func main() {
 		log.Println("error opening connection,", err)
 		return
 	}
+
+	lis, err := net.Listen("tcp", protoport)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterGreeterServer(s, &server{discord})
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
+
 	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: "+compiled)
 	// Wait here until CTRL-C or other term signal is received.
 	log.Println("Bot is now running.  Press CTRL-C to exit.")
