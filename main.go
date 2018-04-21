@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dghubble/go-twitter/twitter"
@@ -11,7 +8,6 @@ import (
 	"github.com/heshoots/discordbot/models"
 	"github.com/kelseyhightower/envconfig"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -74,34 +70,6 @@ func tweet(message string) string {
 		log.Println("could not tweet,", err)
 	}
 	return "http://twitter.com/sodiumshowdown/status/" + fmt.Sprint(tweet.ID)
-}
-
-func createTournament(name string, game string) (string, error) {
-	client := &http.Client{}
-	tournamentvalues := map[string]string{"name": name, "url": name, "subdomain": config.Subdomain, "game_name": game, "tournament_type": "double elimination"}
-	values := map[string]map[string]string{"tournament": tournamentvalues}
-	jsonValue, err := json.Marshal(values)
-	if err != nil {
-		return "", err
-	}
-	req, err := http.NewRequest("POST", "https://api.challonge.com/v1/tournaments.json", bytes.NewBuffer(jsonValue))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	q := req.URL.Query()
-	q.Add("api_key", config.ChallongeApi)
-	req.URL.RawQuery = q.Encode()
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	if resp.StatusCode != 200 {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		return "", errors.New(resp.Status + "challonge create failed " + buf.String())
-	}
-	return "http://" + config.Subdomain + ".challonge.com/" + name, nil
 }
 
 func isAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
