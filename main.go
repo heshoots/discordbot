@@ -49,7 +49,7 @@ func (s *server) SendMessage(ctx context.Context, in *pb.HelloRequest) (*pb.Role
 func main() {
 	envconfig.Usage("discord_bot", &config)
 	if err := envconfig.Process("discord_bot", &config); err != nil {
-		log.Println(os.Stderr, err)
+		log.Println(err)
 		os.Exit(1)
 	}
 	models.DB(config.DatabaseHost, config.Database, config.DatabaseUser, config.DatabasePassword)

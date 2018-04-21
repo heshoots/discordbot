@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/heshoots/discordbot/discordhelpers"
 	"testing"
 )
 
@@ -29,22 +30,22 @@ func GetMockMessageCreate(content string, authorID string) *discordgo.MessageCre
 
 func TestHasPrefix(t *testing.T) {
 	msg := GetMockMessageCreate("!hello world", "10")
-	res := hasPrefix("!hello", msg)
+	res := discordhelpers.HasPrefix("!hello", msg)
 	if res != true {
 		t.Error("Message contains prefix")
 	}
 	msg = GetMockMessageCreate("no !hello world", "10")
-	res = hasPrefix("!hello", msg)
+	res = discordhelpers.HasPrefix("!hello", msg)
 	if res != false {
 		t.Error("Prefix is not at beginning of message")
 	}
 	msg = GetMockMessageCreate("!test world", "10")
-	res = hasPrefix("!hello", msg)
+	res = discordhelpers.HasPrefix("!hello", msg)
 	if res != false {
 		t.Error("Prefix does not occur")
 	}
 	msg = GetMockMessageCreate("!hell", "10")
-	res = hasPrefix("!hello", msg)
+	res = discordhelpers.HasPrefix("!hello", msg)
 	if res != false {
 		t.Error("Message is shorter than prefix")
 	}
@@ -71,17 +72,17 @@ func TestPrefixHandler(t *testing.T) {
 
 func TestGetComman(t *testing.T) {
 	messageCreate := GetMockMessageCreate("!command this is a command", "10")
-	command := getCommand(messageCreate)
+	command := discordhelpers.GetCommand(messageCreate)
 	if command != "this is a command" {
 		t.Error("Returned the incorrect command")
 	}
 	messageCreate = GetMockMessageCreate("!nocommand", "10")
-	command = getCommand(messageCreate)
+	command = discordhelpers.GetCommand(messageCreate)
 	if command != "" {
 		t.Error("didn't return empty command")
 	}
 	messageCreate = GetMockMessageCreate("!nocommand ", "10")
-	command = getCommand(messageCreate)
+	command = discordhelpers.GetCommand(messageCreate)
 	if command != "" {
 		t.Error("doesn't handle extra spaces in command")
 	}
