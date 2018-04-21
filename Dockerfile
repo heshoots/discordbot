@@ -12,6 +12,7 @@ ADD router.go .
 ADD routes.go .
 ADD handlers.go .
 ADD discordhelpers/ ./discordhelpers
+ADD twitter/ ./twitter
 ADD challonge/ ./challonge
 ADD models/ ./models
 RUN dep ensure

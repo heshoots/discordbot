@@ -2,14 +2,16 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/heshoots/discordbot/discordhelpers"
 	"github.com/heshoots/discordbot/models"
+	"github.com/heshoots/discordbot/twitter"
 	"log"
 	"time"
 )
 
 func isAdminHandler(handler func(s *discordgo.Session, m *discordgo.MessageCreate)) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		if isAdmin(s, m) {
+		if discordhelpers.IsAdmin(s, m) {
 			handler(s, m)
 		}
 		return
@@ -21,15 +23,15 @@ func prefixHandler(prefix string, handler func(*discordgo.Session, *discordgo.Me
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
-		if hasPrefix(prefix, m) {
+		if discordhelpers.HasPrefix(prefix, m) {
 			handler(s, m)
 		}
 	}
 }
 
 func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
-		command := getCommand(m)
+	if discordhelpers.IsAdmin(s, m) {
+		command := discordhelpers.GetCommand(m)
 		err := models.DeleteRole(command)
 		if err != nil {
 			log.Println("couldn't delete role, ", err)
@@ -41,14 +43,14 @@ func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
-		roles, err := getRoles(s, m)
+	if discordhelpers.IsAdmin(s, m) {
+		roles, err := discordhelpers.GetRoles(s, m)
 		if err != nil {
 			s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
 			log.Println("couldn't get roles, ", err)
 			return
 		}
-		command := getCommand(m)
+		command := discordhelpers.GetCommand(m)
 		for _, role := range roles {
 			if command == role.Name {
 				role := models.Role{Name: role.Name, RoleID: role.ID}
@@ -91,18 +93,8 @@ Available Roles
 }
 
 func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	command := getCommand(m)
-	guild, _ := getGuild(s, m)
-	if command == "Thems Fighting Herds" {
-		err := s.GuildBanCreateWithReason(guild.ID, m.Author.ID, "Furry", 0)
-		if err != nil {
-			log.Println("Something went wrong", err)
-			s.ChannelMessageSend(m.ChannelID, "Something went wrong")
-			return
-		}
-		s.ChannelMessageSend(m.ChannelID, "BANNED: get owned")
-		return
-	}
+	command := discordhelpers.GetCommand(m)
+	guild, _ := discordhelpers.GetGuild(s, m)
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
@@ -119,14 +111,14 @@ func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	command := getCommand(m)
+	command := discordhelpers.GetCommand(m)
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
 		return
 	}
-	guild, _ := getGuild(s, m)
+	guild, _ := discordhelpers.GetGuild(s, m)
 	err = s.GuildMemberRoleRemove(guild.ID, m.Author.ID, role.RoleID)
 	if err != nil {
 		log.Println("couldn't remove role", err)
@@ -137,24 +129,33 @@ func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
-		if hasPrefix("!announce", m) {
-			s.ChannelMessageSend(config.PostChannel, "@everyone "+getCommand(m))
+	if discordhelpers.IsAdmin(s, m) {
+		if discordhelpers.HasPrefix("!announce", m) {
+			s.ChannelMessageSend(config.PostChannel, "@everyone "+discordhelpers.GetCommand(m))
 		} else {
-			s.ChannelMessageSend(config.PostChannel, getCommand(m))
+			s.ChannelMessageSend(config.PostChannel, discordhelpers.GetCommand(m))
 		}
 	}
 }
 
 func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
-		url := tweet(getCommand(m))
+	if discordhelpers.IsAdmin(s, m) {
+		auth := twitter.TwitterAuth{
+			config.ConsumerKey,
+			config.ConsumerSecret,
+			config.AccessToken,
+			config.AccessSecret,
+		}
+		url, err := twitter.Tweet(auth, discordhelpers.GetCommand(m))
+		if err != nil {
+			s.ChannelMessageSend(config.AdminChannel, err.Error())
+		}
 		s.ChannelMessageSend(config.AdminChannel, url)
 	}
 }
 
 func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if isAdmin(s, m) {
+	if discordhelpers.IsAdmin(s, m) {
 		helpText := `!help get help (obviously)
 !discord sends message to discord notifications
 !twitter/tweet sends tweet to smbf twitter
@@ -168,7 +169,7 @@ func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func RoleCallHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	guild, err := getGuild(s, m)
+	guild, err := discordhelpers.GetGuild(s, m)
 	if err != nil {
 		log.Panic(err)
 		return
