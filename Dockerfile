@@ -10,9 +10,12 @@ ADD Gopkg.toml .
 ADD main.go .
 ADD router.go .
 ADD routes.go .
+ADD handlers.go .
+ADD discordhelpers/ ./discordhelpers
+ADD challonge/ ./challonge
 ADD models/ ./models
 RUN dep ensure
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-X main.compiled=`date -u +.%Y%m%d.%H%M%S` -w" -o discordbot ./main.go ./router.go ./routes.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-X main.compiled=`date -u +.%Y%m%d.%H%M%S` -w" -o discordbot ./main.go ./router.go ./routes.go ./handlers.go
 
 FROM alpine:3.7
 RUN apk add --update ca-certificates
