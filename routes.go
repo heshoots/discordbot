@@ -12,6 +12,7 @@ type Route struct {
 	Prefix  []string
 	Handler HandlerFunc
 	Admin   bool
+	Logged  bool
 }
 
 type Routes []Route
@@ -23,11 +24,13 @@ func GetRoutes() Routes {
 			[]string{"!discord", "!announce"},
 			discordHandler,
 			true,
+			true,
 		},
 		Route{
 			"Challonge",
 			[]string{"!challonge"},
 			challonge.ChallongeHandler(config.ChallongeApi, config.Subdomain, []string{config.AdminChannel, config.PostChannel}, []string{config.AdminChannel}),
+			true,
 			true,
 		},
 		Route{
@@ -35,11 +38,13 @@ func GetRoutes() Routes {
 			[]string{"!twitter", "!tweet", "!announce"},
 			twitterHandler,
 			true,
+			true,
 		},
 		Route{
 			"Make Role",
 			[]string{"!makerole"},
 			makeRoleHandler,
+			true,
 			true,
 		},
 		Route{
@@ -47,11 +52,13 @@ func GetRoutes() Routes {
 			[]string{"!removerole"},
 			removeRoleHandler,
 			true,
+			true,
 		},
 		Route{
 			"Show Roles",
 			[]string{"!showroles"},
 			showRolesHandler,
+			true,
 			true,
 		},
 		Route{
@@ -59,17 +66,20 @@ func GetRoutes() Routes {
 			[]string{"!iam "},
 			iamHandler,
 			false,
+			true,
 		},
 		Route{
 			"Take Role",
 			[]string{"!iamn"},
 			iamnHandler,
 			false,
+			true,
 		},
 		Route{
 			"Role Call",
 			[]string{""},
 			RoleCallHandler,
+			false,
 			false,
 		},
 		Route{
@@ -77,12 +87,14 @@ func GetRoutes() Routes {
 			[]string{"!help"},
 			RoleCallHandler,
 			false,
+			true,
 		},
 		Route{
 			"Chloe hi",
 			[]string{"!hi"},
 			hiHandler,
 			false,
+			true,
 		},
 	}
 }
