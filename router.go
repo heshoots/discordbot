@@ -21,10 +21,10 @@ func NewRouter(apiKey string) (*discordgo.Session, error) {
 			} else {
 				handler = route.Handler
 			}
-			handler = prefixHandler(prefix, handler)
 			if route.Admin {
 				handler = isAdminHandler(handler)
 			}
+			handler = prefixHandler(prefix, handler)
 			discord.AddHandler(handler)
 		}
 	}
