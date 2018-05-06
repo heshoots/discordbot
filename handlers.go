@@ -216,7 +216,7 @@ func lanesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	out := ""
 	for _, event := range eventlist {
 		if event.Date.Weekday() == time.Sunday {
-			out = out + event.Title + "\n" + event.Date.Format("Mon Jan 2 15:04:05 MST 2006") + "\n" + event.Description + "\n\n"
+			out = out + event.Title + "\n" + event.Date.Format("Mon Jan 2") + "\n" + event.Description + "\n\n"
 		}
 	}
 	s.ChannelMessageSend(m.ChannelID, out)
