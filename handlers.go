@@ -13,6 +13,8 @@ func isAdminHandler(handler func(s *discordgo.Session, m *discordgo.MessageCreat
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if discordhelpers.IsAdmin(s, m) {
 			handler(s, m)
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "You dont have permissions to do that")
 		}
 		return
 	}
