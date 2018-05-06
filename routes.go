@@ -96,5 +96,12 @@ func GetRoutes() Routes {
 			false,
 			true,
 		},
+		Route{
+			"Lanes",
+			[]string{"!lanes"},
+			lanesHandler,
+			true,
+			true,
+		},
 	}
 }

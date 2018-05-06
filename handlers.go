@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/heshoots/discordbot/discordhelpers"
+	"github.com/heshoots/discordbot/events"
 	"github.com/heshoots/discordbot/models"
 	"github.com/heshoots/discordbot/twitter"
 	"log"
@@ -204,4 +205,19 @@ func Logger(route Route) func(s *discordgo.Session, m *discordgo.MessageCreate) 
 
 func hiHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSend(m.ChannelID, "https://78.media.tumblr.com/c52387b2f0599b6aad20defb9b3ad6b9/tumblr_ngwarrlkfG1qcm0i5o2_500.gif")
+}
+
+func lanesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	eventlist, err := events.GetLanesEvents()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	out := ""
+	for _, event := range eventlist {
+		if event.Date.Weekday() == time.Sunday {
+			out = out + event.Title + "\n" + event.Date.Format("Mon Jan 2 15:04:05 MST 2006") + "\n" + event.Description + "\n\n"
+		}
+	}
+	s.ChannelMessageSend(m.ChannelID, out)
 }
