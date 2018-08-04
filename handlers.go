@@ -73,7 +73,7 @@ func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func inviteHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSend(m.ChannelID, "http://discord.superminerbattle.farm")
+	s.ChannelMessageSend(m.ChannelID, "Invite Link: <http://discord.superminerbattle.farm>")
 }
 
 func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
