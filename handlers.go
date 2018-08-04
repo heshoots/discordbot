@@ -162,17 +162,21 @@ func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discordhelpers.IsAdmin(s, m) {
-		helpText := `!help get help (obviously)
-!discord sends message to discord notifications
-!twitter/tweet sends tweet to smbf twitter
-!announce tweets and messages notifications, uses @ everyone in discord
-!challonge TournamentName Game creates tournament, posts it in notifications
-!makerole makes a role available to be added by bot
-!removerole removes role from being added by bot`
-		s.ChannelMessageSend(config.AdminChannel, helpText)
+	var help string
+	if m.ChannelID == config.AdminChannel {
+		for _, route := range GetRoutes() {
+			if route.Logged {
+				help += route.Prefix[0] + " : " + route.HelpText + "\n"
+			}
+		}
+	} else {
+		for _, route := range GetRoutes() {
+			if !route.Admin && route.Logged {
+				help += route.Prefix[0] + " : " + route.HelpText + "\n"
+			}
+		}
 	}
-
+	s.ChannelMessageSend(m.ChannelID, help)
 }
 
 func RoleCallHandler(s *discordgo.Session, m *discordgo.MessageCreate) {

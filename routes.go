@@ -8,11 +8,12 @@ import (
 type HandlerFunc func(s *discordgo.Session, m *discordgo.MessageCreate)
 
 type Route struct {
-	Name    string
-	Prefix  []string
-	Handler HandlerFunc
-	Admin   bool
-	Logged  bool
+	Name     string
+	Prefix   []string
+	Handler  HandlerFunc
+	Admin    bool
+	Logged   bool
+	HelpText string
 }
 
 type Routes []Route
@@ -25,6 +26,7 @@ func GetRoutes() Routes {
 			discordHandler,
 			true,
 			true,
+			"(message) Send Message to announcements channel",
 		},
 		Route{
 			"Challonge",
@@ -32,6 +34,7 @@ func GetRoutes() Routes {
 			challonge.ChallongeHandler(config.ChallongeApi, config.Subdomain, []string{config.AdminChannel, config.PostChannel}, []string{config.AdminChannel}),
 			true,
 			true,
+			"(tournament_name, game_name) Starts challonge tournament with name for the game",
 		},
 		Route{
 			"Invite",
@@ -39,6 +42,7 @@ func GetRoutes() Routes {
 			inviteHandler,
 			false,
 			true,
+			"Get invite link",
 		},
 		Route{
 			"Twitter",
@@ -46,6 +50,7 @@ func GetRoutes() Routes {
 			twitterHandler,
 			true,
 			true,
+			"Send message to twitter",
 		},
 		Route{
 			"Make Role",
@@ -53,6 +58,7 @@ func GetRoutes() Routes {
 			makeRoleHandler,
 			true,
 			true,
+			"(role_name) Enables role to be added from role_channel",
 		},
 		Route{
 			"Remove Role",
@@ -60,6 +66,7 @@ func GetRoutes() Routes {
 			removeRoleHandler,
 			true,
 			true,
+			"(role_name) Disable role addition from role_channel",
 		},
 		Route{
 			"Show Roles",
@@ -67,6 +74,7 @@ func GetRoutes() Routes {
 			showRolesHandler,
 			true,
 			true,
+			"display roles in role channel",
 		},
 		Route{
 			"Give Role",
@@ -74,6 +82,7 @@ func GetRoutes() Routes {
 			iamHandler,
 			false,
 			true,
+			"(role_name) Get a role",
 		},
 		Route{
 			"Take Role",
@@ -81,6 +90,7 @@ func GetRoutes() Routes {
 			iamnHandler,
 			false,
 			true,
+			"(role_name) Remove a role",
 		},
 		Route{
 			"Role Call",
@@ -88,13 +98,15 @@ func GetRoutes() Routes {
 			RoleCallHandler,
 			false,
 			false,
+			"",
 		},
 		Route{
 			"Help Handler",
 			[]string{"!help"},
-			RoleCallHandler,
+			helpHandler,
 			false,
 			true,
+			"Get help",
 		},
 		Route{
 			"Chloe hi",
@@ -102,6 +114,7 @@ func GetRoutes() Routes {
 			hiHandler,
 			false,
 			true,
+			"Say Hello",
 		},
 		Route{
 			"Lanes",
@@ -109,6 +122,7 @@ func GetRoutes() Routes {
 			lanesHandler,
 			true,
 			true,
+			"Check lanes events",
 		},
 	}
 }
