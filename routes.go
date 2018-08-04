@@ -34,6 +34,13 @@ func GetRoutes() Routes {
 			true,
 		},
 		Route{
+			"Invite",
+			[]string{"!invite"},
+			inviteHandler,
+			false,
+			true,
+		},
+		Route{
 			"Twitter",
 			[]string{"!twitter", "!tweet", "!announce"},
 			twitterHandler,

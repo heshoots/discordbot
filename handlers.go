@@ -72,6 +72,10 @@ func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
+func inviteHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSend(m.ChannelID, "http://discord.superminerbattle.farm")
+}
+
 func showRolesHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	rolesHelp := `
 To get a role use !iam Role
