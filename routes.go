@@ -74,7 +74,7 @@ func GetRoutes() Routes {
 			showRolesHandler,
 			true,
 			true,
-			"display roles in role channel",
+			"Display roles in role channel",
 		},
 		Route{
 			"Give Role",
