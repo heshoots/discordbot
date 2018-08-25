@@ -5,14 +5,12 @@ import (
 	"github.com/heshoots/discordbot/models"
 	"github.com/kelseyhightower/envconfig"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	pb "github.com/heshoots/discordbot/protobuffer"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 var config struct {
@@ -62,16 +60,6 @@ func main() {
 	if err != nil {
 		log.Println("error opening connection,", err)
 		return
-	}
-
-	lis, err := net.Listen("tcp", protoport)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{discord})
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
 	}
 
 	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: "+compiled)
