@@ -10,7 +10,6 @@ addons:
 before_script:
   - echo -e "Host $SERVER\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 script:
-- go test
 - docker build -t quorauk/discordbot -f build/Dockerfile .
 after_success:
 - docker tag quorauk/discordbot:latest quorauk/discordbot:$TRAVIS_BUILD_NUMBER
