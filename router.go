@@ -16,11 +16,7 @@ func NewRouter(apiKey string) (*discordgo.Session, error) {
 	for _, route := range routes {
 		for _, prefix := range route.Prefix {
 			var handler func(s *discordgo.Session, m *discordgo.MessageCreate)
-			if route.Logged {
-				handler = Logger(route)
-			} else {
-				handler = route.Handler
-			}
+			handler = Logger(route)
 			if route.Admin {
 				handler = isAdminHandler(handler)
 			}

@@ -165,35 +165,16 @@ func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var help string
 	if m.ChannelID == config.AdminChannel {
 		for _, route := range GetRoutes() {
-			if route.Logged {
-				help += route.Prefix[0] + " : " + route.HelpText + "\n"
-			}
+			help += route.Prefix[0] + " : " + route.HelpText + "\n"
 		}
 	} else {
 		for _, route := range GetRoutes() {
-			if !route.Admin && route.Logged {
+			if !route.Admin {
 				help += route.Prefix[0] + " : " + route.HelpText + "\n"
 			}
 		}
 	}
 	s.ChannelMessageSend(m.ChannelID, help)
-}
-
-func RoleCallHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	guild, err := discordhelpers.GetGuild(s, m)
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-	for _, role := range m.MentionRoles {
-		roleData, err := s.State.Role(guild.ID, role)
-		if err != nil {
-			log.Panic(err)
-			return
-		}
-		models.AddRoleCall(roleData.Name)
-		log.Println(roleData)
-	}
 }
 
 func Logger(route Route) func(s *discordgo.Session, m *discordgo.MessageCreate) {
