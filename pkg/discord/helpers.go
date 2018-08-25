@@ -1,4 +1,4 @@
-package discordhelpers
+package discord
 
 import (
 	"github.com/bwmarrin/discordgo"

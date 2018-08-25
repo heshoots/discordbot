@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/bwmarrin/discordgo"
-	"github.com/heshoots/discordbot/discordhelpers"
+	"github.com/heshoots/discordbot/pkg/discord"
 	"log"
 	"net/http"
 	"strings"
@@ -41,7 +41,7 @@ func CreateTournament(apikey string, subdomain string, name string, game string)
 
 func ChallongeHandler(apikey string, subdomain string, postto []string, errorto []string) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		command := discordhelpers.GetCommand(m)
+		command := discord.GetCommand(m)
 		split := strings.SplitAfterN(command, " ", 2)
 		if len(split) != 2 {
 			for _, channel := range errorto {

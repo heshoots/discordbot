@@ -1,8 +1,8 @@
-package main
+package server
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/heshoots/discordbot/challonge"
+	"github.com/heshoots/discordbot/pkg/challonge"
 )
 
 type HandlerFunc func(s *discordgo.Session, m *discordgo.MessageCreate)

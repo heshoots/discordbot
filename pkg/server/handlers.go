@@ -1,18 +1,18 @@
-package main
+package server
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/heshoots/discordbot/discordhelpers"
-	"github.com/heshoots/discordbot/events"
-	"github.com/heshoots/discordbot/models"
-	"github.com/heshoots/discordbot/twitter"
+	"github.com/heshoots/discordbot/pkg/discord"
+	"github.com/heshoots/discordbot/pkg/events"
+	"github.com/heshoots/discordbot/pkg/models"
+	"github.com/heshoots/discordbot/pkg/twitter"
 	"log"
 	"time"
 )
 
 func isAdminHandler(handler func(s *discordgo.Session, m *discordgo.MessageCreate)) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		if discordhelpers.IsAdmin(s, m) {
+		if discord.IsAdmin(s, m) {
 			handler(s, m)
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "You dont have permissions to do that")
@@ -26,15 +26,15 @@ func prefixHandler(prefix string, handler func(*discordgo.Session, *discordgo.Me
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
-		if discordhelpers.HasPrefix(prefix, m) {
+		if discord.HasPrefix(prefix, m) {
 			handler(s, m)
 		}
 	}
 }
 
 func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discordhelpers.IsAdmin(s, m) {
-		command := discordhelpers.GetCommand(m)
+	if discord.IsAdmin(s, m) {
+		command := discord.GetCommand(m)
 		err := models.DeleteRole(command)
 		if err != nil {
 			log.Println("couldn't delete role, ", err)
@@ -46,14 +46,14 @@ func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discordhelpers.IsAdmin(s, m) {
-		roles, err := discordhelpers.GetRoles(s, m)
+	if discord.IsAdmin(s, m) {
+		roles, err := discord.GetRoles(s, m)
 		if err != nil {
 			s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
 			log.Println("couldn't get roles, ", err)
 			return
 		}
-		command := discordhelpers.GetCommand(m)
+		command := discord.GetCommand(m)
 		for _, role := range roles {
 			if command == role.Name {
 				role := models.Role{Name: role.Name, RoleID: role.ID}
@@ -100,8 +100,8 @@ Available Roles
 }
 
 func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	command := discordhelpers.GetCommand(m)
-	guild, _ := discordhelpers.GetGuild(s, m)
+	command := discord.GetCommand(m)
+	guild, _ := discord.GetGuild(s, m)
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
@@ -118,14 +118,14 @@ func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	command := discordhelpers.GetCommand(m)
+	command := discord.GetCommand(m)
 	role, err := models.GetRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
 		return
 	}
-	guild, _ := discordhelpers.GetGuild(s, m)
+	guild, _ := discord.GetGuild(s, m)
 	err = s.GuildMemberRoleRemove(guild.ID, m.Author.ID, role.RoleID)
 	if err != nil {
 		log.Println("couldn't remove role", err)
@@ -136,24 +136,24 @@ func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discordhelpers.IsAdmin(s, m) {
-		if discordhelpers.HasPrefix("!announce", m) {
-			s.ChannelMessageSend(config.PostChannel, "@everyone "+discordhelpers.GetCommand(m))
+	if discord.IsAdmin(s, m) {
+		if discord.HasPrefix("!announce", m) {
+			s.ChannelMessageSend(config.PostChannel, "@everyone "+discord.GetCommand(m))
 		} else {
-			s.ChannelMessageSend(config.PostChannel, discordhelpers.GetCommand(m))
+			s.ChannelMessageSend(config.PostChannel, discord.GetCommand(m))
 		}
 	}
 }
 
 func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discordhelpers.IsAdmin(s, m) {
+	if discord.IsAdmin(s, m) {
 		auth := twitter.TwitterAuth{
 			config.ConsumerKey,
 			config.ConsumerSecret,
 			config.AccessToken,
 			config.AccessSecret,
 		}
-		url, err := twitter.Tweet(auth, discordhelpers.GetCommand(m))
+		url, err := twitter.Tweet(auth, discord.GetCommand(m))
 		if err != nil {
 			s.ChannelMessageSend(config.AdminChannel, err.Error())
 		}
