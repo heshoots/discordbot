@@ -32,44 +32,9 @@ func prefixHandler(prefix string, handler func(*discordgo.Session, *discordgo.Me
 	}
 }
 
-func removeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discord.IsAdmin(s, m) {
-		command := discord.GetCommand(m)
-		err := models.DeleteRole(command)
-		if err != nil {
-			log.Println("couldn't delete role, ", err)
-			s.ChannelMessageSend(config.AdminChannel, "couldn't delete role")
-			return
-		}
-		s.ChannelMessageSend(config.AdminChannel, "role deleted")
-	}
-}
-
-func makeRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if discord.IsAdmin(s, m) {
-		roles, err := discord.GetRoles(s, m)
-		if err != nil {
-			s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
-			log.Println("couldn't get roles, ", err)
-			return
-		}
-		command := discord.GetCommand(m)
-		for _, role := range roles {
-			if command == role.Name {
-				role := models.Role{Name: role.Name, RoleID: role.ID}
-				err := models.CreateRole(&role)
-				if err != nil {
-					s.ChannelMessageSend(config.AdminChannel, "couldn't create role")
-					log.Println("couldn't create role, ", err)
-					return
-
-				} else {
-					s.ChannelMessageSend(config.AdminChannel, "Role added")
-					return
-				}
-			}
-		}
-	}
+func statusHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	command := discord.GetCommand(m)
+	s.UpdateStatus(0, command)
 }
 
 func inviteHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -86,7 +51,7 @@ Roles ending in "Fighters" can be @ mentioned
 Available Roles
 -----------
 `
-	roles, err := models.GetRoles()
+	roles, err := models.YamlRoles()
 	if err != nil {
 		log.Println("couldn't show roles, ", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't show roles")
@@ -102,7 +67,7 @@ Available Roles
 func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := discord.GetCommand(m)
 	guild, _ := discord.GetGuild(s, m)
-	role, err := models.GetRole(command)
+	role, err := models.YamlRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
@@ -119,7 +84,7 @@ func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := discord.GetCommand(m)
-	role, err := models.GetRole(command)
+	role, err := models.YamlRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
 		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
@@ -138,9 +103,9 @@ func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if discord.IsAdmin(s, m) {
 		if discord.HasPrefix("!announce", m) {
-			s.ChannelMessageSend(config.PostChannel, "@everyone "+discord.GetCommand(m))
+			s.ChannelMessageSend(GetConfig().PostChannel, "@everyone "+discord.GetCommand(m))
 		} else {
-			s.ChannelMessageSend(config.PostChannel, discord.GetCommand(m))
+			s.ChannelMessageSend(GetConfig().PostChannel, discord.GetCommand(m))
 		}
 	}
 }
@@ -148,22 +113,22 @@ func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 func twitterHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if discord.IsAdmin(s, m) {
 		auth := twitter.TwitterAuth{
-			config.ConsumerKey,
-			config.ConsumerSecret,
-			config.AccessToken,
-			config.AccessSecret,
+			GetConfig().ConsumerKey,
+			GetConfig().ConsumerSecret,
+			GetConfig().AccessToken,
+			GetConfig().AccessSecret,
 		}
 		url, err := twitter.Tweet(auth, discord.GetCommand(m))
 		if err != nil {
-			s.ChannelMessageSend(config.AdminChannel, err.Error())
+			s.ChannelMessageSend(GetConfig().AdminChannel, err.Error())
 		}
-		s.ChannelMessageSend(config.AdminChannel, url)
+		s.ChannelMessageSend(GetConfig().AdminChannel, url)
 	}
 }
 
 func helpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var help string
-	if m.ChannelID == config.AdminChannel {
+	if m.ChannelID == GetConfig().AdminChannel {
 		for _, route := range GetRoutes() {
 			help += route.Prefix[0] + " : " + route.HelpText + "\n"
 		}
@@ -189,6 +154,34 @@ func Logger(route Route) func(s *discordgo.Session, m *discordgo.MessageCreate) 
 			m.Content,
 			time.Since(start),
 		)
+	}
+}
+
+func roleNameAddedHandler(s *discordgo.Session, role *discordgo.Role) {
+	time.Sleep(10 * time.Second)
+	log.Println("In function")
+	s.ChannelMessageSend(GetConfig().AdminChannel, "Looks like you just created a role "+role.Mention()+" add it to available roles? Use `!addrole "+role.ID+"`")
+}
+
+func roleAddedHandler(s *discordgo.Session, m *discordgo.GuildRoleCreate) {
+	guildRole := m.GuildRole
+	go roleNameAddedHandler(s, guildRole.Role)
+}
+
+func AddRoleHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSend(GetConfig().PostChannel, discord.GetCommand(m))
+	roles, err := s.GuildRoles(m.GuildID)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "couldn't find role")
+	}
+	for _, role := range roles {
+		if role.ID == discord.GetCommand(m) {
+			err = AddRole(&models.Role{Name: role.Name, RoleID: role.ID})
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "couldn't add role to database")
+			}
+			s.ChannelMessageSend(m.ChannelID, "role added")
+		}
 	}
 }
 

@@ -24,5 +24,10 @@ func NewRouter(apiKey string) (*discordgo.Session, error) {
 			discord.AddHandler(handler)
 		}
 	}
+  /*
+	otherroutes := OtherEvents()
+	for _, route := range otherroutes {
+		discord.AddHandler(route.Handler)
+	}*/
 	return discord, nil
 }

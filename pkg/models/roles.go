@@ -1,57 +1,42 @@
 package models
 
 import (
-	"log"
+	"errors"
+	"strings"
+
+	"github.com/spf13/viper"
 )
 
 type Role struct {
-	Id     int64
-	Name   string
-	RoleID string
+	Id     int64  `json:"ID,omitempty", yaml: "ID"`
+	Name   string `json:"name", yaml: "name"`
+	RoleID string `json:"roleID", yaml: "roleID"`
 }
 
-func CreateRole(role *Role) error {
-	err := db.Insert(role)
-	if err != nil {
-		return err
-	}
-	return nil
+type Roles struct {
+	Roles []*Role `json:"roles"`
 }
 
-func GetRole(name string) (*Role, error) {
-	role := Role{}
-	err := db.Model(&role).Where("name ILIKE ?", name).Select()
-	if err != nil {
-		return nil, err
-	}
-	return &role, nil
+func save() {
+	viper.SafeWriteConfig()
 }
 
-func DeleteRole(name string) error {
-	_, err := db.Model(&Role{}).Where("name ILIKE ?", name).Delete()
-	return err
+func YamlRoles() ([]*Role, error) {
+	var roles Roles
+	err := viper.Unmarshal(&roles)
+	return roles.Roles, err
 }
 
-func AddRoleCall(roleName string) {
-	role := Role{}
-	err := db.Model(&role).Where("name = ?", roleName).Select()
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-	log.Println(role)
-	_, err = db.Exec("INSERT into rolecall (timestamp, role_id) VALUES (NOW(), ?)", role.Id)
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-}
-
-func GetRoles() ([]Role, error) {
-	var roles []Role
-	err := db.Model(&roles).Select()
+func YamlRole(name string) (*Role, error) {
+	var roles Roles
+	err := viper.Unmarshal(&roles)
 	if err != nil {
 		return nil, err
 	}
-	return roles, nil
+	for _, i := range roles.Roles {
+		if strings.ToUpper(i.Name) == strings.ToUpper(name) {
+			return i, nil
+		}
+	}
+	return nil, errors.New("Couldn't find role")
 }

@@ -29,9 +29,16 @@ func GetRoutes() Routes {
 		Route{
 			"Challonge",
 			[]string{"!challonge"},
-			challonge.ChallongeHandler(config.ChallongeApi, config.Subdomain, []string{config.AdminChannel, config.PostChannel}, []string{config.AdminChannel}),
+			challonge.ChallongeHandler(GetConfig().ChallongeApi, GetConfig().Subdomain, []string{GetConfig().AdminChannel, GetConfig().PostChannel}, []string{GetConfig().AdminChannel}),
 			true,
 			"(tournament_name, game_name) Starts challonge tournament with name for the game",
+		},
+		Route{
+			"Status",
+			[]string{"!status"},
+			statusHandler,
+			true,
+			"(status) update choli status",
 		},
 		Route{
 			"Invite",
@@ -46,20 +53,6 @@ func GetRoutes() Routes {
 			twitterHandler,
 			true,
 			"Send message to twitter",
-		},
-		Route{
-			"Make Role",
-			[]string{"!makerole"},
-			makeRoleHandler,
-			true,
-			"(role_name) Enables role to be added from role_channel",
-		},
-		Route{
-			"Remove Role",
-			[]string{"!removerole"},
-			removeRoleHandler,
-			true,
-			"(role_name) Disable role addition from role_channel",
 		},
 		Route{
 			"Show Roles",

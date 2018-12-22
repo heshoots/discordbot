@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/heshoots/discordbot/pkg/models"
-	"github.com/heshoots/discordbot/pkg/server"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/heshoots/discordbot/pkg/models"
+	"github.com/heshoots/discordbot/pkg/server"
 )
 
 var compiled string
@@ -14,7 +15,8 @@ var compiled string
 func main() {
 	server.SetConfig()
 	config := server.GetConfig()
-	models.DB(config.DatabaseHost, config.Database, config.DatabaseUser, config.DatabasePassword)
+	models.RoleConfig()
+	//models.LoadRoles("./config/config.yaml")
 	discord, err := server.NewRouter(config.DiscordApi)
 	if err != nil {
 		log.Panic(err)
@@ -25,7 +27,6 @@ func main() {
 		log.Println("error opening connection,", err)
 		return
 	}
-
 	discord.ChannelMessageSend(config.AdminChannel, "Redeployed, compiled: "+compiled)
 	// Wait here until CTRL-C or other term signal is received.
 	log.Println("Bot is now running.  Press CTRL-C to exit.")

@@ -1,16 +1,17 @@
 package models
 
 import (
-	"github.com/go-pg/pg"
+	"fmt"
+	"github.com/spf13/viper"
 )
 
-var db *pg.DB
-
-func DB(host string, database string, user string, password string) {
-	db = pg.Connect(&pg.Options{
-		Addr:     host,
-		User:     user,
-		Database: database,
-		Password: password,
-	})
+func RoleConfig() {
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+	viper.AddConfigPath("/etc/discordbot")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Fatal error config file: %s \n", err))
+	}
 }
