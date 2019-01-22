@@ -32,7 +32,6 @@ func AddRole(role *models.Role) error {
 }
 
 func SetConfig() {
-	config.ReadConfigFile("config/config.json")
 	envconfig.Usage("discord_bot", &appconfig)
 	if err := envconfig.Process("discord_bot", &appconfig); err != nil {
 		log.Println(err)

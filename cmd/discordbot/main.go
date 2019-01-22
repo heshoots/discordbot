@@ -16,7 +16,6 @@ func main() {
 	server.SetConfig()
 	config := server.GetConfig()
 	models.RoleConfig()
-	//models.LoadRoles("./config/config.yaml")
 	discord, err := server.NewRouter(config.DiscordApi)
 	if err != nil {
 		log.Panic(err)
