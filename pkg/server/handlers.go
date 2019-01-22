@@ -64,40 +64,54 @@ Available Roles
 	s.ChannelMessageSend(m.ChannelID, "``` "+rolesHelp+output+" ```")
 }
 
+func removeInFuture(s *discordgo.Session, m *discordgo.Message) {
+	go func() {
+		time.Sleep(2 * time.Second)
+		s.ChannelMessageDelete(m.ChannelID, m.ID)
+	}()
+}
+
 func iamHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	defer removeInFuture(s, m.Message)
 	command := discord.GetCommand(m)
 	guild, _ := discord.GetGuild(s, m)
 	role, err := models.YamlRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		sendSelfDestructingMessage(s, m.ChannelID, "couldn't add role")
 		return
 	}
 	err = s.GuildMemberRoleAdd(guild.ID, m.Author.ID, role.RoleID)
 	if err != nil {
 		log.Println("couldn't add role", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't add role")
+		sendSelfDestructingMessage(s, m.ChannelID, "couldn't add role")
 		return
 	}
-	s.ChannelMessageSend(m.ChannelID, "Role added")
+	sendSelfDestructingMessage(s, m.ChannelID, "Role added")
+}
+
+func sendSelfDestructingMessage(s *discordgo.Session, channelID, message string) {
+	reply, _ := s.ChannelMessageSend(channelID, message)
+	removeInFuture(s, reply)
 }
 
 func iamnHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	defer removeInFuture(s, m.Message)
 	command := discord.GetCommand(m)
 	role, err := models.YamlRole(command)
 	if err != nil {
 		log.Println("Role unavailable", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		sendSelfDestructingMessage(s, m.ChannelID, "couldn't remove role")
 		return
 	}
 	guild, _ := discord.GetGuild(s, m)
 	err = s.GuildMemberRoleRemove(guild.ID, m.Author.ID, role.RoleID)
 	if err != nil {
 		log.Println("couldn't remove role", err)
-		s.ChannelMessageSend(m.ChannelID, "couldn't remove role")
+		sendSelfDestructingMessage(s, m.ChannelID, "couldn't remove role")
 		return
 	}
-	s.ChannelMessageSend(m.ChannelID, "Role removed")
+	sendSelfDestructingMessage(s, m.ChannelID, "Role removed")
 }
 
 func discordHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
